@@ -1,13 +1,13 @@
 # 🏎️ TRUEWEAR // Tyre Degradation & Pit Strategy Decision Support System
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastF1](https://img.shields.io/badge/FastF1-3.8.3-red.svg)](https://docs.fastf1.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-38bdf8.svg)](https://tailwindcss.com/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing--open-for-contribution)
+[![Status](https://img.shields.io/badge/Status-Private%20%26%20Proprietary-blue.svg)](LICENSE)
 
 > **TrueWear** is a real-time, physics-informed AI pit strategy and tire degradation engineering intelligence platform for Formula 1 motorsport. It decouples latent confounding factors (fuel burn mass reduction, track rubbering-in, dirty air wake) from raw telemetry to accurately forecast non-linear tire degradation cliffs, undercut windows, and race-equity gains.
 
@@ -228,6 +228,8 @@ We welcome contributions from motorsport engineers, data scientists, and fronten
 
 ---
 
-## 📜 License
+## 📜 License & Intellectual Property
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+**Copyright (c) 2026 Chinmay (hackChinmay). All Rights Reserved.**
+
+This software, source code, neural models, telemetry formulations, and associated documentation are the proprietary and confidential property of the author. Unauthorized copying, modification, distribution, sublicensing, reverse engineering, or commercial use without prior written permission is strictly prohibited.
