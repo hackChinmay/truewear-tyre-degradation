@@ -259,40 +259,46 @@ export const CommandCenter: React.FC = () => {
           </div>
         </div>
 
-        {/* Key Rationale Numbers */}
+        {/* Key Rationale Numbers (6-Point Explainable Framework) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 text-xs">
           <div className="bg-[#081017]/80 p-3 rounded border border-[#172c2c]">
-            <span className="text-[#64798e] text-[10px] block">STRATEGY CONFIDENCE</span>
-            <strong className="text-2xl font-black text-[#00e5a3]">87%</strong>
-            <span className="text-[10px] text-[#55697d] block mt-0.5">
-              10,000 Monte Carlo race iterations
-            </span>
-          </div>
-          <div className="bg-[#081017]/80 p-3 rounded border border-[#172c2c]">
-            <span className="text-[#64798e] text-[10px] block">EXPECTED NET GAIN</span>
+            <span className="text-[#64798e] text-[10px] block">EXPECTED RACE-TIME ADVANTAGE</span>
             <strong className="text-2xl font-black text-[#00e5a3]">-2.8s</strong>
             <span className="text-[10px] text-[#55697d] block mt-0.5">
-              Total race elapsed time delta vs staying out to L42
+              Across 500 Monte Carlo iterations vs Plan B
             </span>
           </div>
           <div className="bg-[#081017]/80 p-3 rounded border border-[#172c2c]">
-            <span className="text-[#64798e] text-[10px] block">ESTIMATED REJOIN WINDOW</span>
-            <strong className="text-2xl font-black text-white">P4 +4.2s</strong>
+            <span className="text-[#64798e] text-[10px] block">PREDICTED DEGRADATION [P10 - P90]</span>
+            <strong className="text-2xl font-black text-amber-400">+0.078 s/lap</strong>
             <span className="text-[10px] text-[#55697d] block mt-0.5">
-              Rejoins ahead of nearest competitor in clear air sector
+              Interval: [+0.065s, +0.094s] (80% confidence)
+            </span>
+          </div>
+          <div className="bg-[#081017]/80 p-3 rounded border border-[#172c2c]">
+            <span className="text-[#64798e] text-[10px] block">CLEAN-AIR REJOIN WINDOW</span>
+            <strong className="text-2xl font-black text-white">92% CLEAR</strong>
+            <span className="text-[10px] text-[#55697d] block mt-0.5">
+              Re-entry into P4 (+4.2s track cushion ahead of P5)
             </span>
           </div>
         </div>
 
-        {/* Model Rationale & Telemetry Context */}
-        <div className="text-xs text-[#9bb0c7] leading-relaxed bg-[#060c14]/70 p-3.5 rounded border border-[#14232f] mb-4">
-          <strong className="text-white">Model Telemetry Rationale:</strong> Current tyre
-          degradation is accelerating at <span className="text-[#ff4b4b] font-bold">+0.078s/lap</span>,
-          with surface temperatures approaching peak thermal stress.
-          The model predicts an acute thermal cliff within the pit window, costing upwards of 1.2s to
-          1.5s per lap thereafter. Executing the pit stop on Lap 38 enables a clean switch to fresh Hard
-          compounds, protecting track position against chasing cars (+11.2s on track, +4.2s net post-pit cushion)
-          and maximizing pace during the final sprint to the checkered flag.
+        {/* Engineer-Friendly 6-Point Explainable Rationale */}
+        <div className="text-xs text-[#9bb0c7] leading-relaxed bg-[#060c14]/70 p-3.5 rounded border border-[#14232f] mb-4 space-y-2">
+          <div className="flex items-center justify-between border-b border-[#14222e] pb-1.5">
+            <strong className="text-white text-xs">Race Engineer Decision Rationale (Plan A // Lap 38 Box):</strong>
+            <span className="text-[10px] text-amber-400 font-bold">Estimated Cliff Risk: 82% if extended to L42</span>
+          </div>
+          <p className="text-[11px] leading-relaxed">
+            <span className="text-white font-semibold">1. Expected Pace &amp; Cliff Avoidance:</span> Current medium tyre degradation is accelerating at <span className="text-[#ff4b4b] font-bold">+0.078s/lap</span> (P50). The performance cliff probability reaches 56% at Lap 38 and surges to 82% by Lap 42. Pitting on Lap 38 keeps tyre degradation below the critical performance region.
+          </p>
+          <p className="text-[11px] leading-relaxed">
+            <span className="text-white font-semibold">2. Traffic Optimization:</span> Re-entering the circuit behind the 21.4s pit delta ensures a clean air gap of +4.2s ahead of chasing cars, completely avoiding dirty air aerodynamic loss (&lt;1.5s wake penalty).
+          </p>
+          <p className="text-[11px] leading-relaxed">
+            <span className="text-white font-semibold">3. Summary:</span> Pitting at Lap 38 minimizes expected total race time while providing an optimal buffer against competitor undercut vulnerability.
+          </p>
         </div>
 
         {/* Action Controls */}

@@ -67,11 +67,11 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
           <h3 className="text-xs font-bold text-white tracking-wider uppercase flex items-center gap-2">
             TYRE DEGRADATION FORECAST &amp; CLIFF PROJECTION
             <span className="text-[10px] text-[#00e5a3] font-normal bg-[#0e2118] px-2 py-0.5 rounded border border-[#174630]">
-              KALMAN FILTER CONVERGED (RESIDUAL COV: 0.0034)
+              ONLINE ADAPTIVE KALMAN STATE ESTIMATOR (INNOVATION RESIDUAL COV: 0.0034)
             </span>
           </h3>
           <p className="text-[10px] text-[#5e7087]">
-            Isolating mechanical tyre wear from fuel-burn correction (-0.058s/lap) and track grip evolution (+0.038s/lap)
+            Isolating mechanical tyre wear via physics-informed latent decomposition: Fuel-burn correction (-0.058s/lap) and track grip evolution (+0.038s/lap)
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2 bg-[#00e5a3]/30 border border-[#00e5a3] rounded-xs" />
-            <span className="text-[#00e5a3]">Confidence (87%)</span>
+            <span className="text-[#00e5a3]">P10 – P90 Uncertainty Interval</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 bg-[#ff2a2a] rounded-full" />

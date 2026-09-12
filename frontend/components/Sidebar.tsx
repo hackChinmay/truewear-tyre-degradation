@@ -30,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'conditions', number: '06', label: 'TRACK & CONDITIONS', icon: Gauge },
   { id: 'reports', number: '07', label: 'REPORTS', icon: FileText },
   { id: 'model', number: '08', label: 'DATA & MODEL', icon: Cpu },
+  { id: 'validation', number: '09', label: 'REAL-WORLD VALIDATION', icon: ShieldCheck },
 ];
 
 export const Sidebar: React.FC = () => {

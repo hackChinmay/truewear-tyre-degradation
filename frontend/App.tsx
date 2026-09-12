@@ -15,6 +15,7 @@ import { StintAnalysis } from './pages/StintAnalysis';
 import { TrackConditions } from './pages/TrackConditions';
 import { Reports } from './pages/Reports';
 import { ModelDiagnostics } from './pages/ModelDiagnostics';
+import { RealWorldValidation } from './pages/RealWorldValidation';
 import { CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -47,6 +48,8 @@ const AppContent: React.FC = () => {
         return <Reports />;
       case 'model':
         return <ModelDiagnostics />;
+      case 'validation':
+        return <RealWorldValidation />;
       default:
         return <CommandCenter />;
     }
