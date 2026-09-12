@@ -42,19 +42,23 @@
 ### The Confounding Factors Problem
 In raw telemetry, lap times often appear stable or even improve over a stint because an F1 car burns approximately $1.72\text{ kg}$ of fuel per lap (shedding $60-80\text{ kg}$ over a stint) while the track rubbers in. Standard black-box AI models mistake this for tires having infinite life, leading to catastrophic mispredictions when the tire suddenly hits its thermal cliff.
 
-TrueWear solves this by utilizing a **Physics-Informed Neural Kalman Filter (PINN-KF)** architecture:
+TrueWear solves this by formulating the degradation dynamics into a decoupled **Multiple Linear Model ($y = \beta_0 + \sum \beta_i X_i + \varepsilon$)**:
 
 ```text
-Δt_lap(n) = Δt_base + k_wear · n^α + β_thermal · (T_bulk - T_ref) - γ_fuel · (M_0 - m_dot · n) - δ_track · ln(n) + ε_traffic
+Δt_lap = β₀ + β₁·X_wear + β₂·X_thermal + β₃·X_fuel + β₄·X_track + ε_traffic
 ```
 
-| Component | Physical Phenomenon | Formula / Weight |
-| :--- | :--- | :--- |
-| **Mechanical Abrasion** ($k_{\text{wear}} \cdot n^\alpha$) | Non-linear polymer chain shear and tread loss | $k = 0.042\text{ s/lap}$, $\alpha = 1.38$ |
-| **Thermal Hysteresis** ($\beta_{\text{thermal}}$) | Core carcass heat build-up over 38°C threshold | $+0.0039\text{ s/}^\circ\text{C}$ |
-| **Fuel Mass Compensation** ($\gamma_{\text{fuel}}$) | Weight reduction acceleration (1.72 kg/lap) | $-0.0581\text{ s/lap}$ |
-| **Track Surface Grip** ($\delta_{\text{track}}$) | Polymer rubber deposition into asphalt micropores | $-0.0380\text{ s/ln}(L)$ |
-| **Dirty Air Wake** ($\varepsilon_{\text{traffic}}$) | Front downforce wash trailing within 1.5s | $+0.380\text{ s}$ delta |
+$$\Delta t_{\text{lap}} = \beta_0 + \beta_1 X_{\text{wear}} + \beta_2 X_{\text{thermal}} + \beta_3 X_{\text{fuel}} + \beta_4 X_{\text{track}} + \varepsilon_{\text{traffic}}$$
+
+#### Linear Feature Decomposition:
+| Linear Term | Transformed Feature ($X_i$) | Physical Phenomenon | Fitted Weight ($\beta_i$) |
+| :--- | :--- | :--- | :--- |
+| **$\beta_0$ (Intercept)** | $1$ | Base clean lap time baseline | $\Delta t_{\text{base}}$ |
+| **$\beta_1 X_{\text{wear}}$** | $X_{\text{wear}} = n^\alpha$ | Non-linear polymer chain shear & tread loss | $\beta_1 = +0.042\text{ s/lap}$ ($\alpha = 1.38$) |
+| **$\beta_2 X_{\text{thermal}}$** | $X_{\text{thermal}} = (T_{\text{bulk}} - T_{\text{ref}})$ | Core carcass heat over 38°C threshold | $\beta_2 = +0.0039\text{ s/}^\circ\text{C}$ |
+| **$\beta_3 X_{\text{fuel}}$** | $X_{\text{fuel}} = (M_0 - \dot{m} \cdot n)$ | Fuel mass shed acceleration (1.72 kg/lap) | $\beta_3 = -0.0581\text{ s/lap}$ |
+| **$\beta_4 X_{\text{track}}$** | $X_{\text{track}} = \ln(n)$ | Track rubbering-in asphalt grip evolution | $\beta_4 = -0.0380\text{ s/ln}(L)$ |
+| **$\varepsilon_{\text{traffic}}$** | Residual wash | Front downforce wash trailing within 1.5s | $+0.380\text{ s}$ delta |
 
 ### Two-Tier Training & Inference System
 
