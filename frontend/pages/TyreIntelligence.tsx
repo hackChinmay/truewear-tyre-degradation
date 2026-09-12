@@ -61,12 +61,12 @@ export const TyreIntelligence: React.FC = () => {
   };
 
   const degRate = selectedCompound === 'SOFT' ? 0.088 : selectedCompound === 'HARD' ? 0.031 : 0.052;
-  const cliffThreshold = selectedCompound === 'SOFT' ? 17 : selectedCompound === 'HARD' ? 39 : 27;
+  const cliffThreshold = selectedCompound === 'SOFT' ? Math.round(selectedCircuit.cliffLapThreshold * 0.45) : selectedCompound === 'HARD' ? selectedCircuit.cliffLapThreshold : Math.round(selectedCircuit.cliffLapThreshold * 0.70);
 
   const futurePredictions = Array.from({ length: 5 }, (_, i) => {
     const age = selectedDriver.tyreAge + i + 1;
     const lap = currentLap + i + 1;
-    const baseLap = 83.2;
+    const baseLap = selectedCircuit.baseLapTimeSeconds + (selectedDriver.position - 1) * 0.08;
     const isOverCliff = age > cliffThreshold;
     const cliffPenalty = isOverCliff ? (age - cliffThreshold) * 0.18 : 0;
     const timeNum = baseLap + age * degRate + cliffPenalty;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRace } from '../context/RaceContext';
-import { STINTS_DATA, HISTORICAL_LAPS } from '../data/mockRaceData';
+import { getCircuitStintsData } from '../data/mockRaceData';
 import {
   ArrowRight,
   BarChart3,
@@ -33,9 +33,73 @@ export const StintAnalysis: React.FC = () => {
     triggerActionNotification,
   } = useRace();
 
+  const driverPaceOffset = (selectedDriver.position - 1) * 0.085;
+  const stintsData = getCircuitStintsData(
+    selectedCircuit.id,
+    selectedCircuit.baseLapTimeSeconds,
+    selectedCircuit.totalLaps,
+    driverPaceOffset
+  );
+
   const handleExportReport = () => {
-    triggerActionNotification(`Exported Stint Kinetics Report for #${selectedDriver.driverNumber} ${selectedDriver.driverName} (#RPT-STINT-0926-03).`, 'success');
+    triggerActionNotification(`Exported Stint Kinetics Report for #${selectedDriver.driverNumber} ${selectedDriver.driverName} at ${selectedCircuit.name}.`, 'success');
   };
+
+  const formatLapTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = (sec % 60).toFixed(3);
+    return `${m}:${Number(s) < 10 ? '0' : ''}${s}`;
+  };
+
+  const baseSec = selectedCircuit.baseLapTimeSeconds + driverPaceOffset;
+  const stint1 = stintsData[0];
+  const stint2 = stintsData[1];
+  const stint3 = stintsData[2];
+
+  // SVG Chart Scaling
+  const totalLaps = selectedCircuit.totalLaps;
+  const chartWidth = 840;
+  const chartHeight = 220;
+  const padLeft = 60;
+  const padRight = 40;
+  const padTop = 35;
+  const padBottom = 25;
+  const plotW = chartWidth - padLeft - padRight;
+  const plotH = chartHeight - padTop - padBottom;
+
+  const yMax = baseSec + 3.2;
+  const yMin = baseSec - 0.5;
+
+  const getX = (lap: number) => padLeft + ((lap - 1) / Math.max(1, totalLaps - 1)) * plotW;
+  const getY = (sec: number) => padTop + plotH - ((Math.min(yMax, Math.max(yMin, sec)) - yMin) / (yMax - yMin)) * plotH;
+
+  // Generate smooth stint curves
+  // Stint 1: Soft (starts aggressive, degrades steeply)
+  const s1Points = Array.from({ length: stint1.totalLaps }, (_, i) => {
+    const lap = stint1.startLap + i;
+    const age = i + 1;
+    const p = baseSec - 0.2 + age * 0.114 + (age > 10 ? Math.pow(age - 10, 1.4) * 0.12 : 0);
+    return `${getX(lap)},${getY(p)}`;
+  }).join(' L ');
+
+  // Stint 2: Medium (moderate degradation)
+  const s2Points = Array.from({ length: stint2.totalLaps }, (_, i) => {
+    const lap = stint2.startLap + i;
+    const age = i + 1;
+    const p = baseSec + age * 0.078 - (lap * 0.035);
+    return `${getX(lap)},${getY(p)}`;
+  }).join(' L ');
+
+  // Stint 3: Hard (linear, stable)
+  const s3Points = Array.from({ length: stint3.totalLaps }, (_, i) => {
+    const lap = stint3.startLap + i;
+    const age = i + 1;
+    const p = baseSec + 0.35 + age * 0.042 - (lap * 0.045);
+    return `${getX(lap)},${getY(p)}`;
+  }).join(' L ');
+
+  // Corner Energy multipliers based on circuit lateral loading
+  const energyFactor = selectedCircuit.id === 'silverstone' ? 1.24 : selectedCircuit.id === 'spa' ? 1.25 : selectedCircuit.id === 'bahrain' ? 1.15 : 1.0;
 
   return (
     <div id="page-stint-analysis" className="space-y-6 pb-12 font-mono">
@@ -148,7 +212,7 @@ export const StintAnalysis: React.FC = () => {
 
       {/* Chronological Stint Architecture (3 Cards) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {STINTS_DATA.map((stint) => {
+        {stintsData.map((stint) => {
           const isSelectedStint = selectedStintNumber === stint.stintNumber;
           const isActive = stint.status === 'ACTIVE';
           const isCompleted = stint.status === 'COMPLETED';
@@ -256,10 +320,10 @@ export const StintAnalysis: React.FC = () => {
         <div className="flex items-center justify-between pb-3 border-b border-[#182333] mb-3">
           <div>
             <h3 className="text-xs font-bold text-white tracking-wider uppercase">
-              STINT LAP TIME TRAJECTORY &amp; PACE KINETICS (LAPS 1-53)
+              STINT LAP TIME TRAJECTORY &amp; PACE KINETICS (LAPS 1-{selectedCircuit.totalLaps})
             </h3>
             <p className="text-[10px] text-[#5e7086]">
-              Visualizing the degradation slopes across Stint 1 (Soft), Stint 2 (Medium), and Stint 3 (Hard)
+              Visualizing the degradation slopes across Stint 1 (Soft), Stint 2 (Medium), and Stint 3 (Hard) at {selectedCircuit.name}
             </p>
           </div>
           <div className="flex items-center gap-3 text-[10px]">
@@ -280,46 +344,46 @@ export const StintAnalysis: React.FC = () => {
 
         {/* SVG Chart */}
         <div className="h-64 bg-[#070b10] rounded border border-[#141d2a] p-2 flex items-center justify-center">
-          <svg viewBox="0 0 840 220" className="w-full h-full" preserveAspectRatio="none">
+          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full" preserveAspectRatio="none">
             {/* Grid lines */}
-            <line x1="50" y1="40" x2="800" y2="40" stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
-            <text x="42" y="43" textAnchor="end" fill="#55677d" fontSize="9">1:26.0</text>
+            <line x1={padLeft} y1={getY(baseSec + 3.0)} x2={chartWidth - padRight} y2={getY(baseSec + 3.0)} stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
+            <text x={padLeft - 8} y={getY(baseSec + 3.0) + 3} textAnchor="end" fill="#55677d" fontSize="9">{formatLapTime(baseSec + 3.0)}</text>
 
-            <line x1="50" y1="90" x2="800" y2="90" stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
-            <text x="42" y="93" textAnchor="end" fill="#55677d" fontSize="9">1:25.0</text>
+            <line x1={padLeft} y1={getY(baseSec + 2.0)} x2={chartWidth - padRight} y2={getY(baseSec + 2.0)} stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
+            <text x={padLeft - 8} y={getY(baseSec + 2.0) + 3} textAnchor="end" fill="#55677d" fontSize="9">{formatLapTime(baseSec + 2.0)}</text>
 
-            <line x1="50" y1="140" x2="800" y2="140" stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
-            <text x="42" y="143" textAnchor="end" fill="#55677d" fontSize="9">1:24.0</text>
+            <line x1={padLeft} y1={getY(baseSec + 1.0)} x2={chartWidth - padRight} y2={getY(baseSec + 1.0)} stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
+            <text x={padLeft - 8} y={getY(baseSec + 1.0) + 3} textAnchor="end" fill="#55677d" fontSize="9">{formatLapTime(baseSec + 1.0)}</text>
 
-            <line x1="50" y1="190" x2="800" y2="190" stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
-            <text x="42" y="193" textAnchor="end" fill="#55677d" fontSize="9">1:23.0</text>
+            <line x1={padLeft} y1={getY(baseSec)} x2={chartWidth - padRight} y2={getY(baseSec)} stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
+            <text x={padLeft - 8} y={getY(baseSec) + 3} textAnchor="end" fill="#55677d" fontSize="9">{formatLapTime(baseSec)}</text>
 
             {/* Pit Stop Markers */}
-            <line x1="280" y1="20" x2="280" y2="200" stroke="#ff2a2a" strokeWidth="1.5" strokeDasharray="4 2" />
-            <text x="280" y="32" textAnchor="middle" fill="#ff4b4b" fontSize="8" fontWeight="bold">BOX 1 (L16)</text>
+            <line x1={getX(stint1.endLap)} y1="20" x2={getX(stint1.endLap)} y2={plotH + padTop} stroke="#ff2a2a" strokeWidth="1.5" strokeDasharray="4 2" />
+            <text x={getX(stint1.endLap)} y="28" textAnchor="middle" fill="#ff4b4b" fontSize="8" fontWeight="bold">BOX 1 (L{stint1.endLap})</text>
 
-            <line x1="600" y1="20" x2="600" y2="200" stroke="#00e5a3" strokeWidth="1.5" strokeDasharray="4 2" />
-            <text x="600" y="32" textAnchor="middle" fill="#00e5a3" fontSize="8" fontWeight="bold">TARGET BOX 2 (L38)</text>
+            <line x1={getX(stint2.endLap)} y1="20" x2={getX(stint2.endLap)} y2={plotH + padTop} stroke="#00e5a3" strokeWidth="1.5" strokeDasharray="4 2" />
+            <text x={getX(stint2.endLap)} y="28" textAnchor="middle" fill="#00e5a3" fontSize="8" fontWeight="bold">TARGET BOX 2 (L{stint2.endLap})</text>
 
-            {/* Stint 1 line (Soft: starts 1:23.4 -> degrades to 1:26.1) */}
+            {/* Stint 1 line (Soft) */}
             <path
-              d="M 60 170 L 100 165 L 150 155 L 200 135 L 250 85 L 275 50"
+              d={`M ${s1Points}`}
               fill="none"
               stroke="#ef4444"
               strokeWidth="2.5"
             />
 
-            {/* Stint 2 line (Medium: starts 1:23.2 -> degrades to 1:24.5) */}
+            {/* Stint 2 line (Medium) */}
             <path
-              d="M 285 180 L 350 175 L 430 165 L 510 150 L 550 135 L 595 115"
+              d={`M ${s2Points}`}
               fill="none"
               stroke="#eab308"
               strokeWidth="2.5"
             />
 
-            {/* Stint 3 projected (Hard: 1:23.6 -> stable to 1:24.0) */}
+            {/* Stint 3 projected (Hard) */}
             <path
-              d="M 605 160 L 660 158 L 720 152 L 780 148 L 800 145"
+              d={`M ${s3Points}`}
               fill="none"
               stroke="#38bdf8"
               strokeWidth="2.5"
@@ -335,7 +399,7 @@ export const StintAnalysis: React.FC = () => {
           <h3 className="text-xs font-bold text-white tracking-wider uppercase">
             COMPOUND DEGRADATION BENCHMARK &amp; MULTI-STINT COMPARISON
           </h3>
-          <span className="text-[10px] text-[#00e5a3]">MONZA BENCHMARK DATASET</span>
+          <span className="text-[10px] text-[#00e5a3]">{selectedCircuit.name.toUpperCase()} BENCHMARK DATASET</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -359,11 +423,11 @@ export const StintAnalysis: React.FC = () => {
                     SOFT (C4)
                   </span>
                 </td>
-                <td className="py-2.5 px-3 text-white">Stint 1 (L1-16)</td>
-                <td className="py-2.5 px-3">1:23.420s</td>
+                <td className="py-2.5 px-3 text-white">Stint 1 (L1-{stint1.endLap})</td>
+                <td className="py-2.5 px-3">{stint1.bestLap}</td>
                 <td className="py-2.5 px-3 text-red-400 font-bold">+0.114 s/lap</td>
-                <td className="py-2.5 px-3 text-white">13 Laps</td>
-                <td className="py-2.5 px-3 text-red-400 font-bold">1:26.110s</td>
+                <td className="py-2.5 px-3 text-white">{Math.round(stint1.totalLaps * 0.8)} Laps</td>
+                <td className="py-2.5 px-3 text-red-400 font-bold">{stint1.worstLap}</td>
                 <td className="py-2.5 px-3 text-red-400">62% (Overheating)</td>
                 <td className="py-2.5 px-3 text-[#94a3b8]">Severe Shoulder Blistering</td>
               </tr>
@@ -373,11 +437,11 @@ export const StintAnalysis: React.FC = () => {
                     MEDIUM (C3)
                   </span>
                 </td>
-                <td className="py-2.5 px-3 text-white font-bold">Stint 2 (L17-34 Active)</td>
-                <td className="py-2.5 px-3 text-[#00d2ff] font-bold">1:23.218s</td>
+                <td className="py-2.5 px-3 text-white font-bold">Stint 2 (L{stint2.startLap}-{stint2.endLap} Active)</td>
+                <td className="py-2.5 px-3 text-[#00d2ff] font-bold">{stint2.bestLap}</td>
                 <td className="py-2.5 px-3 text-yellow-400 font-bold">+0.078 s/lap</td>
-                <td className="py-2.5 px-3 text-white">22 Laps</td>
-                <td className="py-2.5 px-3 text-yellow-400">1:24.510s</td>
+                <td className="py-2.5 px-3 text-white">{stint2.totalLaps} Laps</td>
+                <td className="py-2.5 px-3 text-yellow-400">{stint2.worstLap}</td>
                 <td className="py-2.5 px-3 text-emerald-400">89% (Optimal)</td>
                 <td className="py-2.5 px-3 text-[#94a3b8]">Uniform Wear / FR Peak</td>
               </tr>
@@ -388,10 +452,10 @@ export const StintAnalysis: React.FC = () => {
                   </span>
                 </td>
                 <td className="py-2.5 px-3 text-white">Benchmark Projection</td>
-                <td className="py-2.5 px-3">1:23.640s</td>
+                <td className="py-2.5 px-3">{stint3.bestLap}</td>
                 <td className="py-2.5 px-3 text-emerald-400 font-bold">+0.042 s/lap</td>
-                <td className="py-2.5 px-3 text-white">32 Laps</td>
-                <td className="py-2.5 px-3 text-emerald-400">1:24.180s</td>
+                <td className="py-2.5 px-3 text-white">{Math.round(stint3.totalLaps * 1.3)} Laps</td>
+                <td className="py-2.5 px-3 text-emerald-400">{stint3.worstLap}</td>
                 <td className="py-2.5 px-3 text-emerald-400 font-bold">95% (Ultra Stable)</td>
                 <td className="py-2.5 px-3 text-[#94a3b8]">Low Grain / High Endurance</td>
               </tr>
@@ -404,23 +468,23 @@ export const StintAnalysis: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 bg-[#0b1017] p-4 rounded border border-[#1b2536] text-xs">
         <div className="bg-[#0e1520] p-2.5 rounded border border-[#192435]">
           <span className="text-[#55677d] text-[10px] block">FL CORNER ENERGY</span>
-          <strong className="text-white text-base">18.2 kJ</strong>
+          <strong className="text-white text-base">{(18.2 * energyFactor).toFixed(1)} kJ</strong>
         </div>
         <div className="bg-[#0e1520] p-2.5 rounded border border-[#192435]">
           <span className="text-[#55677d] text-[10px] block">FR CORNER ENERGY</span>
-          <strong className="text-[#ff4b4b] text-base">22.4 kJ (PEAK)</strong>
+          <strong className="text-[#ff4b4b] text-base">{(22.4 * energyFactor).toFixed(1)} kJ (PEAK)</strong>
         </div>
         <div className="bg-[#0e1520] p-2.5 rounded border border-[#192435]">
           <span className="text-[#55677d] text-[10px] block">RL CORNER ENERGY</span>
-          <strong className="text-white text-base">11.9 kJ</strong>
+          <strong className="text-white text-base">{(11.9 * energyFactor).toFixed(1)} kJ</strong>
         </div>
         <div className="bg-[#0e1520] p-2.5 rounded border border-[#192435]">
           <span className="text-[#55677d] text-[10px] block">RR CORNER ENERGY</span>
-          <strong className="text-white text-base">12.3 kJ</strong>
+          <strong className="text-white text-base">{(12.3 * energyFactor).toFixed(1)} kJ</strong>
         </div>
         <div className="bg-[#0e1520] p-2.5 rounded border border-[#192435]">
           <span className="text-[#55677d] text-[10px] block">TOTAL THERMAL WORK</span>
-          <strong className="text-[#00e5a3] text-base">64.8 kJ</strong>
+          <strong className="text-[#00e5a3] text-base">{(64.8 * energyFactor).toFixed(1)} kJ</strong>
         </div>
       </div>
     </div>

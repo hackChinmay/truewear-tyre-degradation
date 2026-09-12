@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRace } from '../context/RaceContext';
 import { HISTORICAL_LAPS } from '../data/mockRaceData';
 
 interface DegradationChartProps {
@@ -10,17 +11,24 @@ interface DegradationChartProps {
 export const DegradationChart: React.FC<DegradationChartProps> = ({
   currentLap = 34,
   highlightPitWindow = true,
-  cliffLap = 39.4,
+  cliffLap,
 }) => {
   const [hoveredLap, setHoveredLap] = useState<number | null>(null);
+  const { selectedCircuit } = useRace();
 
-  // We map laps 15 to 48 for detailed high-resolution view of Stint 2 & 3
-  const laps = HISTORICAL_LAPS.filter((l) => l.lapNumber >= 16 && l.lapNumber <= 48);
+  const totalLaps = selectedCircuit?.totalLaps ?? 53;
+  const activeCliff = cliffLap ?? selectedCircuit?.cliffLapThreshold ?? 39.4;
 
-  const minLap = 16;
-  const maxLap = 48;
+  const minLap = Math.max(8, Math.round(totalLaps * 0.28));
+  const maxLap = Math.min(totalLaps, Math.round(totalLaps * 0.90));
   const minDelta = -0.2;
   const maxDelta = 2.4;
+
+  const pitStart = Math.max(minLap, Math.round(activeCliff - 2.4));
+  const pitEnd = Math.min(maxLap, Math.round(activeCliff - 0.4));
+
+  // Map laps dynamically within the active window
+  const laps = HISTORICAL_LAPS.filter((l) => l.lapNumber >= minLap && l.lapNumber <= maxLap);
 
   const width = 840;
   const height = 280;
@@ -30,7 +38,7 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
   const plotHeight = height - padding.top - padding.bottom;
 
   const getX = (lapNum: number) => {
-    return padding.left + ((lapNum - minLap) / (maxLap - minLap)) * plotWidth;
+    return padding.left + ((lapNum - minLap) / Math.max(1, maxLap - minLap)) * plotWidth;
   };
 
   const getY = (delta: number) => {
@@ -39,12 +47,12 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
   };
 
   // Build SVG Paths
-  // 1. Observed Pace points (for lap <= 34)
+  // 1. Observed Pace points
   const observedLaps = laps.filter((l) => l.lapNumber <= currentLap);
   const observedPoints = observedLaps.map((l) => `${getX(l.lapNumber)},${getY(l.observedDelta)}`).join(' ');
 
   // 2. Baseline Model line (linear +0.052s/lap)
-  const baselinePath = `M ${getX(16)} ${getY(0.0)} L ${getX(48)} ${getY(1.664)}`;
+  const baselinePath = `M ${getX(minLap)} ${getY(0.0)} L ${getX(maxLap)} ${getY(Math.min(maxDelta, (maxLap - minLap) * 0.052))}`;
 
   // 3. Predicted ML Pace curve
   const predictedPoints = laps.map((l) => `${getX(l.lapNumber)},${getY(l.modelPredictedDelta)}`).join(' ');
@@ -136,46 +144,53 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
           })}
 
           {/* Vertical Lap Grid lines */}
-          {[20, 25, 30, 35, 40, 45].map((lapNum) => {
-            const x = getX(lapNum);
-            return (
-              <g key={lapNum}>
-                <line
-                  x1={x}
-                  y1={padding.top}
-                  x2={x}
-                  y2={height - padding.bottom}
-                  stroke="#141d2a"
-                  strokeWidth="1"
-                />
-                <text
-                  x={x}
-                  y={height - padding.bottom + 14}
-                  textAnchor="middle"
-                  fill="#4c5d72"
-                  fontSize="9"
-                >
-                  L{lapNum}
-                </text>
-              </g>
-            );
-          })}
+          {(() => {
+            const step = Math.max(4, Math.round((maxLap - minLap) / 6));
+            const ticks = [];
+            for (let l = minLap + step; l < maxLap; l += step) {
+              ticks.push(l);
+            }
+            return ticks.map((lapNum) => {
+              const x = getX(lapNum);
+              return (
+                <g key={lapNum}>
+                  <line
+                    x1={x}
+                    y1={padding.top}
+                    x2={x}
+                    y2={height - padding.bottom}
+                    stroke="#141d2a"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x={x}
+                    y={height - padding.bottom + 14}
+                    textAnchor="middle"
+                    fill="#4c5d72"
+                    fontSize="9"
+                  >
+                    L{lapNum}
+                  </text>
+                </g>
+              );
+            });
+          })()}
 
-          {/* Pit Box Window Shaded Area (L37 - L39) */}
+          {/* Pit Box Window Shaded Area */}
           {highlightPitWindow && (
             <g>
               <rect
-                x={getX(37)}
+                x={getX(pitStart)}
                 y={padding.top}
-                width={getX(39) - getX(37)}
+                width={Math.max(10, getX(pitEnd) - getX(pitStart))}
                 height={plotHeight}
                 fill="#00e5a3"
                 opacity="0.12"
               />
               <rect
-                x={getX(37)}
+                x={getX(pitStart)}
                 y={padding.top + 2}
-                width={getX(39) - getX(37)}
+                width={Math.max(10, getX(pitEnd) - getX(pitStart))}
                 height="16"
                 fill="#004b33"
                 stroke="#00e5a3"
@@ -183,14 +198,14 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
                 rx="2"
               />
               <text
-                x={(getX(37) + getX(39)) / 2}
+                x={(getX(pitStart) + getX(pitEnd)) / 2}
                 y={padding.top + 13}
                 textAnchor="middle"
                 fill="#00e5a3"
                 fontSize="8"
                 fontWeight="bold"
               >
-                PIT WINDOW L37-39
+                PIT WINDOW L{pitStart}-{pitEnd}
               </text>
             </g>
           )}
@@ -198,16 +213,16 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
           {/* Thermal Cliff Boundary (Dynamic per circuit) */}
           <g>
             <line
-              x1={getX(cliffLap)}
+              x1={getX(activeCliff)}
               y1={padding.top}
-              x2={getX(cliffLap)}
+              x2={getX(activeCliff)}
               y2={height - padding.bottom}
               stroke="#ff2a2a"
               strokeWidth="1.5"
               strokeDasharray="4 2"
             />
             <rect
-              x={getX(cliffLap) - 40}
+              x={getX(activeCliff) - 40}
               y={padding.top + 25}
               width="80"
               height="15"
@@ -217,21 +232,21 @@ export const DegradationChart: React.FC<DegradationChartProps> = ({
               rx="2"
             />
             <text
-              x={getX(cliffLap)}
+              x={getX(activeCliff)}
               y={padding.top + 35}
               textAnchor="middle"
               fill="#ff4b4b"
               fontSize="7.5"
               fontWeight="bold"
             >
-              THERMAL CLIFF L{cliffLap.toFixed(1)}
+              THERMAL CLIFF L{activeCliff.toFixed(1)}
             </text>
           </g>
 
-          {/* Current Lap Marker (Lap 34) */}
+          {/* Current Lap Marker */}
           <g>
             <line
-              x1={getX(currentLap)}
+              x1={getX(Math.min(maxLap, Math.max(minLap, currentLap)))}
               y1={padding.top}
               x2={getX(currentLap)}
               y2={height - padding.bottom}

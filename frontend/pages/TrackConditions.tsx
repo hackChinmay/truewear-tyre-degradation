@@ -118,7 +118,7 @@ export const TrackConditions: React.FC = () => {
                 CHART 01 // TRACK EVOLUTION &amp; GRIP INDEX (μ)
               </h3>
               <p className="text-[10px] text-[#5e7086]">
-                Deposition Rate: +0.0024 index/lap • Est. Grip Saturation: Lap 42 (~1.051 μ)
+                Deposition Rate: +0.0024 index/lap • Est. Grip Saturation: Lap {Math.round(selectedCircuit.totalLaps * 0.80)} (~{(1.0 + (weatherState.trackTemp / 100) * 0.12).toFixed(3)} μ)
               </p>
             </div>
             <span className="text-[10px] text-[#00d2ff]">RUBBERING-IN</span>
@@ -135,13 +135,21 @@ export const TrackConditions: React.FC = () => {
               <line x1="40" y1="130" x2="380" y2="130" stroke="#162334" strokeWidth="1" strokeDasharray="2 2" />
               <text x="35" y="133" textAnchor="end" fill="#55677d" fontSize="8">1.010μ</text>
 
-              {/* Current Lap 34 marker */}
-              <line x1="260" y1="20" x2="260" y2="140" stroke="#00d2ff" strokeWidth="1.5" strokeDasharray="2 2" />
-              <text x="260" y="152" textAnchor="middle" fill="#00d2ff" fontSize="8">L34 (NOW)</text>
+              {/* Dynamic Current Lap marker */}
+              {(() => {
+                const normLap = Math.min(currentLap, selectedCircuit.totalLaps);
+                const currentLapX = 50 + (normLap / Math.max(1, selectedCircuit.totalLaps)) * 320;
+                return (
+                  <>
+                    <line x1={currentLapX} y1="20" x2={currentLapX} y2="140" stroke="#00d2ff" strokeWidth="1.5" strokeDasharray="2 2" />
+                    <text x={currentLapX} y="152" textAnchor="middle" fill="#00d2ff" fontSize="8">L{normLap} (NOW)</text>
+                  </>
+                );
+              })()}
 
               {/* Grip evolution logarithmic curve */}
               <path
-                d="M 50 140 Q 150 70 260 50 T 380 40"
+                d="M 50 140 Q 160 70 270 50 T 380 38"
                 fill="none"
                 stroke="#00e5a3"
                 strokeWidth="2.5"
@@ -158,7 +166,7 @@ export const TrackConditions: React.FC = () => {
                 CHART 02 // THERMAL GRADIENT VS DEGRADATION MULTIPLIER
               </h3>
               <p className="text-[10px] text-[#5e7086]">
-                Pearson Correlation: r = 0.884 • Thermal Multiplier: 1.18x (Elevated above 38°C)
+                Pearson Correlation: r = 0.884 • Surface: {trackTempStr} ({weatherState.trackTemp > 38 ? 'Elevated above 38°C' : 'Optimal Window'})
               </p>
             </div>
             <span className="text-[10px] text-amber-400">THERMAL COUPLING</span>
@@ -186,6 +194,23 @@ export const TrackConditions: React.FC = () => {
                 stroke="#ff4b4b"
                 strokeWidth="2.5"
               />
+
+              {/* Dynamic current track temp marker */}
+              {(() => {
+                // Map temp 20C - 50C to X (50 - 380)
+                const clampedT = Math.max(20, Math.min(50, weatherState.trackTemp));
+                const tempX = 50 + ((clampedT - 20) / 30) * 330;
+                // Calculate y on the curve
+                const tempY = clampedT < 35 ? 135 - ((clampedT - 20) / 15) * 10 : 125 - ((clampedT - 35) / 15) * 90;
+                return (
+                  <g>
+                    <circle cx={tempX} cy={tempY} r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
+                    <text x={tempX} y={Math.max(20, tempY - 8)} textAnchor="middle" fill="#f59e0b" fontSize="8" fontWeight="bold">
+                      {weatherState.trackTemp.toFixed(1)}°C
+                    </text>
+                  </g>
+                );
+              })()}
             </svg>
           </div>
         </div>

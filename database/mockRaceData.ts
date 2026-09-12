@@ -993,10 +993,164 @@ export const CIRCUIT_CONFOUNDING_FACTORS: Record<string, ConfoundingFactorBreakd
       severity: 'HIGH',
     },
   ],
+  bahrain: [
+    {
+      id: 'factor-1',
+      name: '1. TYRE AGE (PRIMARY FACTOR)',
+      category: 'TYRE_AGE',
+      impactLabel: 'HIGH ABRASION WEAR',
+      impactValueStr: '+0.098 s/lap',
+      impactValueSeconds: 0.098,
+      direction: 'Coarse granite asphalt micro-shear',
+      sharePercentage: 42.4,
+      description:
+        'Sakhir rough granite asphalt combined with traction acceleration zones out of Turn 1, 4, 8, and 10 induces severe mechanical tyre wear and surface micro-tearing.',
+      severity: 'CRITICAL',
+    },
+    {
+      id: 'factor-2',
+      name: '2. TRACK EVOLUTION',
+      category: 'TRACK_EVO',
+      impactLabel: 'RAPID DESERT RUBBERING',
+      impactValueStr: '+0.042 s/lap gain',
+      impactValueSeconds: -0.042,
+      direction: 'Sand blow-off + Rubber deposition',
+      sharePercentage: 24.8,
+      description:
+        'Desert wind deposits fine sand on the track early in the session; continuous running clears the racing line and rapidly builds grip as rubber beds into the coarse aggregate.',
+      severity: 'HIGH',
+    },
+    {
+      id: 'factor-3',
+      name: '3. TRAFFIC & DIRTY AIR',
+      category: 'TRAFFIC',
+      impactLabel: 'MAIN STRAIGHT WAKE',
+      impactValueStr: '+0.420 s delta',
+      impactValueSeconds: 0.42,
+      direction: 'Front axle wash in Turn 9/10 sequence',
+      sharePercentage: 11.2,
+      description:
+        'Trailing in dirty air into the tricky downhill braking zone at Turn 10 causes instantaneous front-left lockups and severe localized shoulder heating.',
+      severity: 'HIGH',
+    },
+    {
+      id: 'factor-4',
+      name: '4. FUEL LOAD PROXY',
+      category: 'FUEL_MASS',
+      impactLabel: 'TRACTION SENSITIVITY',
+      impactValueStr: '-0.0612 s/lap',
+      impactValueSeconds: -0.0612,
+      direction: 'Low-speed exit acceleration gain',
+      sharePercentage: 21.6,
+      description:
+        'Burning ~1.78 kg/lap delivers significant traction advantages out of low-speed hairpins as rear axle load diminishes.',
+      severity: 'HIGH',
+    },
+    {
+      id: 'factor-5',
+      name: '5. SURFACE THERMAL GRADIENT',
+      category: 'THERMAL_STRESS',
+      impactLabel: 'TWILIGHT COOLING CYCLE',
+      impactValueStr: '-0.018 s thermal relief',
+      impactValueSeconds: -0.018,
+      direction: 'Nightfall asphalt thermal drop',
+      sharePercentage: 18.5,
+      description:
+        'As ambient and track temperatures drop steadily through twilight into the night race, thermal degradation stabilizes slightly across the final stint.',
+      severity: 'MEDIUM',
+    },
+  ],
 };
 
 export function getCircuitConfoundingFactors(circuitId: string): ConfoundingFactorBreakdown[] {
-  return CIRCUIT_CONFOUNDING_FACTORS[circuitId] || CIRCUIT_CONFOUNDING_FACTORS['monza'];
+  const cid = (circuitId || 'monza').toLowerCase();
+  return CIRCUIT_CONFOUNDING_FACTORS[cid] || CIRCUIT_CONFOUNDING_FACTORS['monza'];
+}
+
+export function getCircuitStintsData(
+  circuitId: string,
+  baseLapTimeSeconds: number = 83.279,
+  totalLaps: number = 53,
+  driverPaceOffset: number = 0
+): StintData[] {
+  const l1 = Math.max(10, Math.round(totalLaps * 0.30));
+  const l2 = Math.max(l1 + 10, Math.round(totalLaps * 0.70));
+
+  const formatLapTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = (sec % 60).toFixed(3);
+    return `${m}:${Number(s) < 10 ? '0' : ''}${s}s`;
+  };
+
+  const s1Base = baseLapTimeSeconds + driverPaceOffset;
+  const s1Avg = s1Base + 1.25;
+  const s1Best = s1Base + 0.141;
+  const s1Worst = s1Base + 2.688;
+
+  const s2Avg = s1Base + 0.563;
+  const s2Best = s1Base - 0.061;
+  const s2Worst = s1Base + 1.231;
+
+  const s3Avg = s1Base + 0.361;
+  const s3Best = s1Base - 0.179;
+  const s3Worst = s1Base + 0.801;
+
+  return [
+    {
+      stintNumber: 1,
+      compound: 'SOFT',
+      compoundCode: 'C4',
+      startLap: 1,
+      endLap: l1,
+      totalLaps: l1,
+      avgPace: formatLapTime(s1Avg),
+      avgPaceSeconds: Number(s1Avg.toFixed(3)),
+      bestLap: formatLapTime(s1Best),
+      worstLap: formatLapTime(s1Worst),
+      degRate: 0.114,
+      pitLossSeconds: 21.82,
+      status: 'COMPLETED',
+      tyreTerminalState: 'Scrubbed + Severe Thermal Cliff (Late Stint)',
+      fuelCorrectedDeltaVsBaseline: 0.84,
+      thermalStabilityIndex: 62,
+    },
+    {
+      stintNumber: 2,
+      compound: 'MEDIUM',
+      compoundCode: 'C3',
+      startLap: l1 + 1,
+      endLap: l2,
+      totalLaps: l2 - l1,
+      avgPace: formatLapTime(s2Avg),
+      avgPaceSeconds: Number(s2Avg.toFixed(3)),
+      bestLap: formatLapTime(s2Best),
+      worstLap: formatLapTime(s2Worst),
+      degRate: 0.078,
+      pitLossSeconds: 21.41,
+      status: 'ACTIVE',
+      tyreTerminalState: 'Optimal Wear Retention, Accelerated FR Heating',
+      fuelCorrectedDeltaVsBaseline: -0.77,
+      thermalStabilityIndex: 89,
+    },
+    {
+      stintNumber: 3,
+      compound: 'HARD',
+      compoundCode: 'C2',
+      startLap: l2 + 1,
+      endLap: totalLaps,
+      totalLaps: totalLaps - l2,
+      avgPace: `${formatLapTime(s3Avg)} (PROJ)`,
+      avgPaceSeconds: Number(s3Avg.toFixed(3)),
+      bestLap: formatLapTime(s3Best),
+      worstLap: formatLapTime(s3Worst),
+      degRate: 0.042,
+      pitLossSeconds: 21.4,
+      status: 'PROJECTED',
+      tyreTerminalState: 'Ultra Stable C2 Spec, Projected Linear Degradation',
+      fuelCorrectedDeltaVsBaseline: -1.24,
+      thermalStabilityIndex: 95,
+    },
+  ];
 }
 
 export const CONFOUNDING_FACTORS: ConfoundingFactorBreakdown[] = CIRCUIT_CONFOUNDING_FACTORS['monza'];
