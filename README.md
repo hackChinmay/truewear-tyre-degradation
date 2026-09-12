@@ -13,7 +13,7 @@
 
 ---
 
-## Table of Contents
+## 📑 Table of Contents
 1. [Key Features](#-key-features)
 2. [Machine Learning & Physics-Informed Architecture](#-machine-learning--physics-informed-architecture)
 3. [Model Accuracy & Benchmark Evaluation](#-model-accuracy--benchmark-evaluation)
@@ -26,25 +26,25 @@
 
 ---
 
-## Key Features
+## ⚡ Key Features
 
-* **Physics-Informed Latent Decoupling**: Isolate genuine tire degradation from confounding motorsport factors (fuel mass reduction, atmospheric temperature swings, and track rubbering-in).
-* **Live FastF1 Telemetry Ingestion**: Seamless Python daemon pulling genuine FIA Formula 1 telemetry, micro-sector speeds, gear shifts, throttle/brake traces, and weather data.
-* **Thermal Cliff Early Detection**: Predicts sudden non-linear performance cliffs 3–5 laps in advance, arming pit-wall race strategists with optimal undercut/overcut windows.
-* **Multi-Stop Monte Carlo Simulator**: Real-time evaluation of Plan A, Plan B (long overcut), and Plan C (aggressive sprint) strategies against live competitor intervals.
+* **Physics-Informed Latent Decoupling**: Isolates genuine tire degradation from confounding motorsport factors (fuel mass burn-off, atmospheric/asphalt temperature swings, and track rubbering-in).
+* **Live FastF1 Telemetry Ingestion**: Seamless Python daemon streaming genuine FIA Formula 1 telemetry, micro-sector speeds, gear shifts, throttle/brake traces, and weather data.
+* **Thermal Cliff Early Warning**: Predicts sudden non-linear degradation cliffs 3–5 laps in advance, arming pit-wall strategists with actionable undercut/overcut windows.
+* **Multi-Stop Monte Carlo Simulator**: Real-time evaluation of Plan A, Plan B (extended overcut), and Plan C (aggressive sprint) against competitor track position.
 * **Interactive HUD & Sector Visualizer**: Real-time vector-based circuit map with animated F1 cars, DRS zones, sector delta telemetry, and tire thermal heatmaps.
 * **Engineering Dossier Generator & PDF Export**: Instant compilation of race debriefs with verified telemetry timestamps, formatted for unclipped PDF audit printing.
 
 ---
 
-## Machine Learning & Physics-Informed Architecture
+## 🧠 Machine Learning & Physics-Informed Architecture
 
 ### The Confounding Factors Problem
-In raw telemetry, lap times often stay flat or improve as a stint progresses because the car burns ~1.72 kg of fuel per lap (shedding 60-80 kg over a stint) while the track rubbers in. Standard black-box AI models mistake this for tires having infinite life, failing catastrophically when the tire suddenly hits its thermal cliff.
+In raw telemetry, lap times often appear stable or even improve over a stint because an F1 car burns approximately $1.72\text{ kg}$ of fuel per lap (shedding $60-80\text{ kg}$ over a stint) while the track rubbers in. Standard black-box AI models mistake this for tires having infinite life, leading to catastrophic mispredictions when the tire suddenly hits its thermal cliff.
 
-TrueWear solves this by utilizing a **Physics-Informed Neural Kalman Filter (PINN-KF)** architecture.
+TrueWear solves this by utilizing a **Physics-Informed Neural Kalman Filter (PINN-KF)** architecture:
 
-```latex
+```text
 Δt_lap(n) = Δt_base + k_wear · n^α + β_thermal · (T_bulk - T_ref) - γ_fuel · (M_0 - m_dot · n) - δ_track · ln(n) + ε_traffic
 ```
 
@@ -59,19 +59,19 @@ TrueWear solves this by utilizing a **Physics-Informed Neural Kalman Filter (PIN
 ### Two-Tier Training & Inference System
 
 1. **Tier 1 — Offline Supervised Training**:
-   * **Corpus**: Trained on **1,240,000+ official FIA telemetry sectors** via FastF1 across diverse dry/damp conditions and tire compounds (C1 to C5).
+   * **Corpus**: Trained on **1,240,000+ official FIA telemetry sectors** via FastF1 across diverse dry and damp conditions and tire compounds (Pirelli C1 through C5).
    * **Feature Importance (SHAP Values)**:
-     * Tyre Age ($): **38.0%**
-     * Track Temp & Carcass Heat ($): **24.0%**
-     * Track Grip Evolution ($\delta$): **18.0%**
+     * Tyre Age ($n_{\text{lap}}$): **38.0%**
+     * Track Temp & Carcass Heat ($T_{\text{bulk}}$): **24.0%**
+     * Track Grip Evolution ($\delta_{\text{track}}$): **18.0%**
      * Fuel Mass Burn-off ($\Delta M$): **14.0%**
-     * Aerodynamic Dirty Air Wake ($\varepsilon$): **6.0%**
+     * Aerodynamic Dirty Air Wake ($\varepsilon_{\text{traffic}}$): **6.0%**
 2. **Tier 2 — Online Bayesian Kalman Filter**:
-   * Real-time state observer calculating the Kalman Gain ($) sector-by-sector to correct residual drift and update remaining tire life dynamically.
+   * Real-time state observer calculating the Kalman Gain ($K_t$) sector-by-sector to correct residual drift and update remaining tire life dynamically.
 
 ---
 
-## Model Accuracy & Benchmark Evaluation
+## 📊 Model Accuracy & Benchmark Evaluation
 
 Rigorous benchmarking against official race sector times:
 
@@ -79,25 +79,25 @@ Rigorous benchmarking against official race sector times:
 | :--- | :---: | :---: | :--- |
 | **Mean Absolute Error (MAE)** | **0.084 s** | $< 0.100\text{ s}$ | **Exceeds standard** (residual lap error under 85ms) |
 | **Root Mean Squared Error (RMSE)** | **0.117 s** | $< 0.150\text{ s}$ | High stability during sudden sliding/graining |
-| **Coefficient of Determination (^2$)** | **0.914** | $> 0.850$ | **91.4% explained variance** across 500+ test sectors |
+| **Coefficient of Determination ($R^2$)** | **0.914** | $> 0.850$ | **91.4% explained variance** across 500+ test sectors |
 | **Pit Window Confidence** | **87% – 94%** | $\pm 1\text{ lap}$ | Monte Carlo validated undercut timing |
 | **Inference Latency** | **4.2 ms** | $< 10\text{ ms}$ | Real-time capable for live pit-wall decisions |
 
 ---
 
-## Project Directory Structure
+## 📂 Project Directory Structure
 
 The repository is organized into four modular layers:
 
-`
+```text
 truewear-tyre-degradation/
 ├── frontend/                     # Client Presentation Tier (React 19 + Vite)
 │   ├── main.tsx                  # Application bootstrap entry point
 │   ├── App.tsx                   # Route coordinator & navigation shell
-│   ├── index.css                 # Tailwind CSS 4 & print media stylesheets
-│   ├── components/               # Reusable UI (InteractiveCircuitMap, DegradationChart, etc.)
+│   ├── index.css                 # Tailwind CSS 4 & stylesheets
+│   ├── components/               # Reusable UI (CircuitMap, DegradationChart, etc.)
 │   ├── pages/                    # 8 Core Modules (CommandCenter, LiveRaceMonitor, etc.)
-│   ├── context/                  # Global RaceContext & telemetry state dispatcher
+│   ├── context/                  # Global RaceContext & telemetry dispatcher
 │   └── services/                 # Client providers (FastF1HttpProvider, DemoProvider)
 ├── backend/                      # API & Telemetry Streaming Tier
 │   ├── server.ts                 # Full-Stack Node.js / Express server (Port 3000)
@@ -118,11 +118,11 @@ truewear-tyre-degradation/
 ├── package.json                  # Node scripts and dependencies
 ├── tsconfig.json                 # Path aliases (@frontend, @backend, @models, @database)
 └── vite.config.ts                # Vite build & development server config
-`
+```
 
 ---
 
-## Supported Circuits & Real FIA Grids
+## 🏁 Supported Circuits & Real FIA Grids
 
 | Circuit | Country | Length | Laps | Key Characteristics | Featured Drivers |
 | :--- | :--- | :--- | :---: | :--- | :--- |
@@ -132,93 +132,93 @@ truewear-tyre-degradation/
 
 ---
 
-## Getting Started & Local Setup
+## 🚀 Getting Started & Local Setup
 
 ### Prerequisites
 * **Node.js** v18+ & **npm**
 * **Python** 3.10+ & **pip**
 
 ### 1. Clone the Repository
-`ash
-git clone https://github.com/dp-rjt-prsd/truewear-tyre-degradation.git
+```bash
+git clone https://github.com/hackChinmay/truewear-tyre-degradation.git
 cd truewear-tyre-degradation
-`
+```
 
 ### 2. Install Dependencies
-`ash
+```bash
 # Install frontend & Node backend packages
 npm install
 
 # Install Python FastF1 dependencies
 pip install -r backend/requirements.txt
-`
+```
 
 ### 3. Configure Environment Variables
-Copy .env.example to .env:
-`ash
+Copy `.env.example` to `.env`:
+```bash
 cp .env.example .env
-`
+```
 *(Optional) Add your Google Gemini API key to enable generative race engineering debriefs:*
-`env
+```env
 GEMINI_API_KEY=your_gemini_api_key_here
-`
+```
 
 ### 4. Run the Platform
 
 Open two terminals:
 
 **Terminal 1 — Start the Python FastF1 Telemetry Backend (Port 8000):**
-`ash
+```bash
 npm run fastf1
 # or: python -m uvicorn backend.fastf1_service:app --port 8000 --host 127.0.0.1
-`
+```
 
 **Terminal 2 — Start the Node/Express Full-Stack Server (Port 3000):**
-`ash
+```bash
 npm run dev
-`
+```
 
 Open **http://localhost:3000** in your browser!
 
 ---
 
-## API Endpoints
+## 🔌 API Endpoints
 
-### FastF1 Python Daemon (http://127.0.0.1:8000)
-* GET /api/fastf1/status — Health status, FastF1 version, and cache state.
-* GET /api/fastf1/weather?circuit={monza|silverstone|spa} — Live FIA session track & air weather.
-* GET /api/fastf1/telemetry?year=2024&round={round}&driver={driver} — Micro-sector telemetry trace.
+### FastF1 Python Daemon (`http://127.0.0.1:8000`)
+* `GET /api/fastf1/status` — Health status, FastF1 version, and cache state.
+* `GET /api/fastf1/weather?circuit={monza|silverstone|spa}` — Live FIA session track & air weather.
+* `GET /api/fastf1/telemetry?year=2024&round={round}&driver={driver}` — Micro-sector telemetry trace.
 
-### Express Application Server (http://localhost:3000)
-* GET /api/health — Full-stack system capabilities check.
-* GET /api/strategy?lap={n}&pitLap={target}&circuit={circuit} — Real-time pit decision recommendation.
+### Express Application Server (`http://localhost:3000`)
+* `GET /api/health` — Full-stack system capabilities check.
+* `GET /api/strategy?lap={n}&pitLap={target}&circuit={circuit}` — Real-time pit decision recommendation.
 
 ---
 
-## Contributing // Open for Contribution
+## 🤝 Contributing // Open for Contribution
 
 We welcome contributions from motorsport engineers, data scientists, and frontend developers!
 
 ### How to Contribute:
 1. **Fork the Repository** on GitHub.
 2. **Create a Feature Branch**:
-   `ash
+   ```bash
    git checkout -b feature/your-feature-name
-   `
+   ```
 3. **Make Your Changes** and verify tests & build:
-   `ash
+   ```bash
    npm run lint
    npm run build
-   `
+   ```
 4. **Commit with Conventional Commits**:
-   `ash
-   git commit -m  feat: add wet-compound graining penalty model
-   `
+   ```bash
+   git commit -m "feat: add wet-compound graining penalty model"
+   ```
 5. **Push to Your Fork**:
-   `ash
+   ```bash
    git push origin feature/your-feature-name
-   `
-6. **Open a Pull Request** against main describing your enhancements.
+   ```
+6. **Open a Pull Request** against `main` describing your enhancements.
 
 ### Ideas for Contribution:
 * [ ] Add new 2024/2025 circuits (Suzuka, Zandvoort, Monaco).
@@ -228,6 +228,6 @@ We welcome contributions from motorsport engineers, data scientists, and fronten
 
 ---
 
-## License
+## 📜 License
 
-This project is licensed under the **MIT License** — see the LICENSE file for details.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
