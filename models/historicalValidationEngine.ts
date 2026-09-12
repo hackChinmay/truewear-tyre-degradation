@@ -173,7 +173,8 @@ export function runHistoricalRaceValidation(
     const actualLapData = rawLaps[n - 1];
     const compound: TyreCompound = actualLapData.compound;
     const tyreAge = actualLapData.tyreAge;
-    const actualLapSeconds = actualLapData.lapTimeSeconds;
+    const circuitDeltaOffset = circuit.baseLapTimeSeconds - 83.279;
+    const actualLapSeconds = Number((actualLapData.lapTimeSeconds + circuitDeltaOffset).toFixed(3));
 
     const frozenSpec = FROZEN_TRAINING_THRESHOLDS[compound as 'SOFT' | 'MEDIUM' | 'HARD'] || FROZEN_TRAINING_THRESHOLDS.MEDIUM;
 

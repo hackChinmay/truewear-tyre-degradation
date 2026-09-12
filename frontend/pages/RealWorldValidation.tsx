@@ -22,14 +22,33 @@ import {
 } from 'lucide-react';
 
 export const RealWorldValidation: React.FC = () => {
-  const { selectedCircuit, selectedDriver, triggerActionNotification } = useRace();
+  const {
+    selectedCircuit,
+    setCircuitId,
+    selectedDriver,
+    selectedDriverCode: globalDriverCode,
+    setSelectedDriverCode: setGlobalDriverCode,
+    triggerActionNotification,
+  } = useRace();
 
-  const [selectedCircuitId, setSelectedCircuitId] = useState<string>('bahrain');
-  const [selectedDriverCode, setSelectedDriverCode] = useState<string>('SAI');
+  // Active validation circuit and driver (tied directly to global context)
+  const selectedCircuitId = selectedCircuit?.id || 'bahrain';
+  const selectedDriverCode = globalDriverCode || selectedDriver?.driverCode || 'SAI';
+
   const [activeChartTab, setActiveChartTab] = useState<
     'trajectory' | 'residuals' | 'degradation' | 'cliff' | 'interval' | 'comparison'
   >('trajectory');
   const [filterCompound, setFilterCompound] = useState<string>('ALL');
+
+  const handleCircuitChange = (newCircuitId: string) => {
+    setCircuitId(newCircuitId);
+    triggerActionNotification(`Loaded blind validation replay: ${newCircuitId.toUpperCase()}`, 'info');
+  };
+
+  const handleDriverChange = (newDriverCode: string) => {
+    setGlobalDriverCode(newDriverCode);
+    triggerActionNotification(`Switched validation driver: #${newDriverCode}`, 'info');
+  };
 
   // Run the blind chronological validation replay
   const validationResult = useMemo(() => {
@@ -114,10 +133,7 @@ export const RealWorldValidation: React.FC = () => {
             <span className="text-[#64798e] text-[10px]">UNSEEN RACE:</span>
             <select
               value={selectedCircuitId}
-              onChange={(e) => {
-                setSelectedCircuitId(e.target.value);
-                triggerActionNotification(`Loaded blind validation replay: ${e.target.value.toUpperCase()}`, 'info');
-              }}
+              onChange={(e) => handleCircuitChange(e.target.value)}
               className="bg-transparent text-white font-bold outline-none cursor-pointer"
             >
               <option value="bahrain" className="bg-[#0e1622]">2024 Bahrain GP (Real FastF1 Telemetry - Unseen Test)</option>
@@ -131,7 +147,7 @@ export const RealWorldValidation: React.FC = () => {
             <span className="text-[#64798e] text-[10px]">DRIVER:</span>
             <select
               value={selectedDriverCode}
-              onChange={(e) => setSelectedDriverCode(e.target.value)}
+              onChange={(e) => handleDriverChange(e.target.value)}
               className="bg-transparent text-white font-bold outline-none cursor-pointer"
             >
               <option value="SAI" className="bg-[#0e1622]">#55 Sainz (Ferrari - P3 Podium)</option>
