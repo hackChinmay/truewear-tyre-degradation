@@ -179,6 +179,92 @@ export type PageRoute =
   | 'stints'
   | 'conditions'
   | 'reports'
-  | 'model';
+  | 'model'
+  | 'validation';
+
+// Real-World Historical Race Validation Types
+export interface LapValidationRecord {
+  lapNumber: number;
+  compound: TyreCompound;
+  tyreAge: number;
+  predictedLapSeconds: number;
+  actualLapSeconds: number;
+  absoluteError: number;
+  signedError: number;
+  predictedDegRate: number;
+  observedDegRate: number;
+  p10LapSeconds: number;
+  p90LapSeconds: number;
+  insideInterval: boolean;
+  cliffProbability: number;
+  offlinePredictedSeconds: number;
+  offlineAbsoluteError: number;
+  kalmanGain: number;
+  isExcluded?: boolean;
+  exclusionReason?: string;
+}
+
+export interface HistoricalValidationMetrics {
+  validLapsCount: number;
+  excludedLapsCount: number;
+  lapTimeMae: number;
+  lapTimeRmse: number;
+  medianAbsoluteError: number;
+  meanSignedError: number;
+  rSquared: number;
+  percentile95Error: number;
+  degradationMae: number;
+  predictionIntervalCoverage: number;
+  offlineMae: number;
+  onlineAdaptiveMae: number;
+  adaptiveImprovementPercent: number;
+  predictedCliffLap: number;
+  observedCliffOnsetLap: number;
+  cliffErrorLaps: number;
+  cliffWithin1Lap: boolean;
+  cliffWithin2Laps: boolean;
+}
+
+export interface FailureCaseRecord {
+  rank: number;
+  lap: number;
+  compound: TyreCompound;
+  tyreAge: number;
+  predictedTimeStr: string;
+  actualTimeStr: string;
+  absoluteErrorSeconds: number;
+  diagnosedReason:
+    | 'Traffic / Dirty Air Wake'
+    | 'Tyre Scrub-in / Cold Graining'
+    | 'Pit Transition / Out-lap Delta'
+    | 'Yellow Flag / Track Caution'
+    | 'Thermal Asphalt Shift'
+    | 'Model Residual Limitation';
+  telemetryContext: string;
+}
+
+export interface HistoricalValidationResult {
+  circuitId: string;
+  circuitName: string;
+  driverCode: string;
+  driverName: string;
+  totalLaps: number;
+  metrics: HistoricalValidationMetrics;
+  lapRecords: LapValidationRecord[];
+  topFailureCases: FailureCaseRecord[];
+  measuredReplayLatencyMs: number;
+}
+
+export interface InternalBaselineBenchmark {
+  modelId: string;
+  name: string;
+  description: string;
+  type: 'BASELINE' | 'MACHINE_LEARNING' | 'PHYSICS_ONLY' | 'TRUEWEAR_HYBRID';
+  mae: number;
+  rmse: number;
+  rSquared: number;
+  intervalCoveragePercent?: number;
+  inferenceLatencyMs: number;
+}
 
 export * from '../frontend/services/raceDataProvider/types';

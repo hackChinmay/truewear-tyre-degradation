@@ -74,16 +74,29 @@ export const TyreIntelligence: React.FC = () => {
     const s = (timeNum % 60).toFixed(3);
     const timeStr = `${m}:${Number(s) < 10 ? '0' : ''}${s}s`;
 
-    let status = 'OPTIMAL / GOOD';
+    // P10 and P90 uncertainty bounds (heteroscedastic expansion)
+    const sigma = 0.014 * (1.0 + 0.035 * Math.max(0, age - 6));
+    const p10Deg = Math.max(0.01, degRate - 1.282 * sigma);
+    const p90Deg = degRate + 1.282 * sigma;
+
+    // Cumulative Gaussian cliff probability
+    const zCliff = (age - cliffThreshold) / 1.4;
+    const t = 1.0 / (1.0 + 0.2316419 * Math.abs(zCliff));
+    const d = 0.3989422804014327 * Math.exp((-zCliff * zCliff) / 2.0);
+    let p = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    if (zCliff > 0) p = 1.0 - p;
+    const cliffProb = Math.min(99, Math.max(1, Math.round(p * 100)));
+
+    let status = 'NOMINAL / CLEAN';
     let statusColor = 'text-emerald-400 border-emerald-800 bg-emerald-950/40';
-    if (age >= cliffThreshold + 2) {
-      status = 'SEVERE THERMAL CLIFF';
+    if (cliffProb >= 80) {
+      status = 'TERMINAL CLIFF ZONE';
       statusColor = 'text-red-500 border-red-800 bg-red-950/40';
-    } else if (age >= cliffThreshold) {
-      status = 'CRITICAL CLIFF ZONE';
+    } else if (cliffProb >= 50) {
+      status = 'CRITICAL PERFORMANCE CLIFF';
       statusColor = 'text-amber-500 border-amber-800 bg-amber-950/40';
-    } else if (age >= cliffThreshold - 2) {
-      status = 'DEGRADATION WARNING';
+    } else if (cliffProb >= 20) {
+      status = 'ELEVATED DEGRADATION';
       statusColor = 'text-yellow-400 border-yellow-800 bg-yellow-950/40';
     }
 
@@ -91,10 +104,12 @@ export const TyreIntelligence: React.FC = () => {
       age,
       lap,
       time: timeStr,
-      degDelta: `+${(degRate * (i + 1) + cliffPenalty).toFixed(2)}s`,
+      p10DegStr: `+${p10Deg.toFixed(3)}s`,
+      p50DegStr: `+${degRate.toFixed(3)}s`,
+      p90DegStr: `+${p90Deg.toFixed(3)}s`,
+      cliffProb,
       status,
       statusColor,
-      conf: `${Math.max(75, 94 - i * 2)}%`,
     };
   });
 
@@ -372,9 +387,9 @@ export const TyreIntelligence: React.FC = () => {
                 <th className="py-2 px-3">RACE LAP</th>
                 <th className="py-2 px-3">TYRE AGE</th>
                 <th className="py-2 px-3">PREDICTED LAP TIME</th>
-                <th className="py-2 px-3">PROJECTED DEG DELTA</th>
-                <th className="py-2 px-3">PERFORMANCE STATUS</th>
-                <th className="py-2 px-3">STRATEGY CONFIDENCE</th>
+                <th className="py-2 px-3">DEGRADATION [P10 / P50 / P90]</th>
+                <th className="py-2 px-3">CLIFF PROBABILITY</th>
+                <th className="py-2 px-3">PERFORMANCE REGION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#131d2b]">
@@ -383,13 +398,30 @@ export const TyreIntelligence: React.FC = () => {
                   <td className="py-2.5 px-3 font-bold text-white">LAP {pred.lap}</td>
                   <td className="py-2.5 px-3 text-[#cbd5e1]">{pred.age} Laps</td>
                   <td className="py-2.5 px-3 text-[#00d2ff] font-bold">{pred.time}</td>
-                  <td className="py-2.5 px-3 font-bold text-[#ff8f8f]">{pred.degDelta}</td>
+                  <td className="py-2.5 px-3 font-bold text-[#eab308]">
+                    {pred.p50DegStr}{' '}
+                    <span className="text-[10px] text-[#71849a] font-normal">
+                      [{pred.p10DegStr} – {pred.p90DegStr}]
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                        pred.cliffProb >= 80
+                          ? 'bg-red-950/60 text-red-400 border-red-800'
+                          : pred.cliffProb >= 50
+                          ? 'bg-amber-950/60 text-amber-400 border-amber-800'
+                          : 'bg-[#121c2a] text-[#8ea3ba] border-[#1b2b3f]'
+                      }`}
+                    >
+                      {pred.cliffProb}%
+                    </span>
+                  </td>
                   <td className="py-2.5 px-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${pred.statusColor}`}>
                       {pred.status}
                     </span>
                   </td>
-                  <td className="py-2.5 px-3 text-emerald-400 font-bold">{pred.conf}</td>
                 </tr>
               ))}
             </tbody>

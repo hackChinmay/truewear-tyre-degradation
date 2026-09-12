@@ -15,7 +15,7 @@ export const TyreThermalCard: React.FC<TyreThermalCardProps> = ({ wheels }) => {
             4-CORNER TYRE THERMAL &amp; WEAR ESTIMATION
           </h3>
           <span className="text-[10px] font-mono text-[#4e5f73] bg-[#0f1622] px-2 py-0.5 rounded border border-[#1b2737]">
-            DERIVED THERMAL MODEL • NOMINAL WINDOW: 95°C - 105°C
+            ESTIMATED THERMAL PROXY • NOMINAL WINDOW: 95°C - 105°C
           </span>
         </div>
         <span className="text-[10px] font-mono text-[#00e5a3] flex items-center gap-1">
@@ -58,13 +58,13 @@ export const TyreThermalCard: React.FC<TyreThermalCardProps> = ({ wheels }) => {
               {/* Surface & Carcass Temperatures */}
               <div className="flex items-baseline justify-between mb-2">
                 <div>
-                  <div className="text-[9px] text-[#55677d] uppercase tracking-wider">SURFACE TEMP</div>
+                  <div className="text-[9px] text-[#55677d] uppercase tracking-wider">SURFACE TEMP (DERIVED)</div>
                   <div className={`text-2xl font-black ${isPeak ? 'text-[#ff4b4b]' : 'text-white'}`}>
                     {wheel.surfaceTemp}°C
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[9px] text-[#55677d] uppercase tracking-wider">CARCASS CORE</div>
+                  <div className="text-[9px] text-[#55677d] uppercase tracking-wider">CARCASS CORE (ESTIMATED PROXY)</div>
                   <div className="text-sm font-bold text-[#8fa0b5]">{wheel.carcassTemp}°C</div>
                 </div>
               </div>
