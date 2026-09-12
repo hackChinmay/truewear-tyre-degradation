@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Public read for academic prototype analytical collections
+    // Direct client writes are forbidden; backend uses Admin SDK (which bypasses rules)
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /stints/{stintId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /lap_records/{recordId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /feature_sets/{featureSetId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /models/{modelId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /predictions/{predictionId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /strategy_runs/{strategyRunId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Optional user profiles
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /app_sessions/{sessionId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

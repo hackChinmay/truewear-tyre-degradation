@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@media print {
+  /* Hide all UI layout chrome when printing */
+  #top-telemetry-bar,
+  #left-telemetry-nav,
+  #report-generator-form,
+  #reports-audit-table,
+  #reports-filter-bar,
+  #reports-page-header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset layout constraints so all pages can print without clipping */
+  html, body, #root, #main-scrollable-content, main {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Professional report document styling */
+  .printable-dossier {
+    display: block !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 2px solid #0f172a !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  .printable-dossier * {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    background-color: transparent !important;
+  }
+
+  .printable-dossier .metric-highlight {
+    font-weight: 800 !important;
+    font-size: 1.25rem !important;
+    color: #000000 !important;
+  }
+}

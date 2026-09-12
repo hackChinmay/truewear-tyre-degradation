@@ -1,0 +1,16 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+cache/
+database/cache/
+__pycache__/
+*.pyc
+*.sqlite
+*.ff1pkl
+.vscode/
+
