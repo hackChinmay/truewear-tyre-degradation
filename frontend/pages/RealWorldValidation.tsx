@@ -24,8 +24,8 @@ import {
 export const RealWorldValidation: React.FC = () => {
   const { selectedCircuit, selectedDriver, triggerActionNotification } = useRace();
 
-  const [selectedCircuitId, setSelectedCircuitId] = useState<string>(selectedCircuit?.id || 'monza');
-  const [selectedDriverCode, setSelectedDriverCode] = useState<string>(selectedDriver?.driverCode || 'LEC');
+  const [selectedCircuitId, setSelectedCircuitId] = useState<string>('bahrain');
+  const [selectedDriverCode, setSelectedDriverCode] = useState<string>('SAI');
   const [activeChartTab, setActiveChartTab] = useState<
     'trajectory' | 'residuals' | 'degradation' | 'cliff' | 'interval' | 'comparison'
   >('trajectory');
@@ -59,17 +59,18 @@ export const RealWorldValidation: React.FC = () => {
 
   const getX = (lap: number) => padding.left + ((lap - minLap) / Math.max(1, maxLap - minLap)) * plotW;
 
-  // Trajectory SVG Bounds
-  const minTime = 80.5;
-  const maxTime = 85.5;
+  // Trajectory SVG Bounds (dynamically computed from current race lap times)
+  const validLapTimes = lapRecords.filter(r => !r.isExcluded && r.actualLapSeconds > 0).map(r => r.actualLapSeconds);
+  const minTime = validLapTimes.length > 0 ? Math.floor(Math.min(...validLapTimes)) - 1.0 : 80.5;
+  const maxTime = validLapTimes.length > 0 ? Math.ceil(Math.max(...validLapTimes)) + 1.0 : 85.5;
   const getYTime = (sec: number) => {
     const clamped = Math.max(minTime, Math.min(maxTime, sec));
     return padding.top + plotH - ((clamped - minTime) / (maxTime - minTime)) * plotH;
   };
 
-  // Residual SVG Bounds (-0.4s to +0.8s)
-  const minRes = -0.3;
-  const maxRes = 0.6;
+  // Residual SVG Bounds (-0.4s to +1.6s)
+  const minRes = -0.4;
+  const maxRes = 1.6;
   const getYRes = (sec: number) => {
     const clamped = Math.max(minRes, Math.min(maxRes, sec));
     return padding.top + plotH - ((clamped - minRes) / (maxRes - minRes)) * plotH;
@@ -119,7 +120,8 @@ export const RealWorldValidation: React.FC = () => {
               }}
               className="bg-transparent text-white font-bold outline-none cursor-pointer"
             >
-              <option value="monza" className="bg-[#0e1622]">2024 Italian GP (Monza)</option>
+              <option value="bahrain" className="bg-[#0e1622]">2024 Bahrain GP (Real FastF1 Telemetry - Unseen Test)</option>
+              <option value="monza" className="bg-[#0e1622]">2024 Italian GP (Monza Replay)</option>
               <option value="silverstone" className="bg-[#0e1622]">2024 British GP (Silverstone)</option>
               <option value="spa" className="bg-[#0e1622]">2024 Belgian GP (Spa)</option>
             </select>
@@ -132,12 +134,12 @@ export const RealWorldValidation: React.FC = () => {
               onChange={(e) => setSelectedDriverCode(e.target.value)}
               className="bg-transparent text-white font-bold outline-none cursor-pointer"
             >
-              <option value="LEC" className="bg-[#0e1622]">#16 Leclerc (Ferrari)</option>
+              <option value="SAI" className="bg-[#0e1622]">#55 Sainz (Ferrari - P3 Podium)</option>
+              <option value="VER" className="bg-[#0e1622]">#01 Verstappen (Red Bull - P1)</option>
+              <option value="LEC" className="bg-[#0e1622]">#16 Leclerc (Ferrari - P4)</option>
+              <option value="NOR" className="bg-[#0e1622]">#04 Norris (McLaren - P6)</option>
               <option value="HAM" className="bg-[#0e1622]">#44 Hamilton (Mercedes)</option>
-              <option value="VER" className="bg-[#0e1622]">#01 Verstappen (Red Bull)</option>
-              <option value="NOR" className="bg-[#0e1622]">#04 Norris (McLaren)</option>
               <option value="PIA" className="bg-[#0e1622]">#81 Piastri (McLaren)</option>
-              <option value="SAI" className="bg-[#0e1622]">#55 Sainz (Ferrari)</option>
             </select>
           </div>
         </div>
