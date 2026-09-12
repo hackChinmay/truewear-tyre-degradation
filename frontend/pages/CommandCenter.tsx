@@ -41,6 +41,26 @@ export const CommandCenter: React.FC = () => {
     navigateTo('strategy');
   };
 
+  const driverPaceOffset = (selectedDriver.position - 1) * 0.085;
+  const basePace = selectedCircuit.baseLapTimeSeconds + driverPaceOffset;
+  const currentPaceSec = basePace + 0.133;
+
+  const formatLapTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = (sec % 60).toFixed(3);
+    return `${m}:${Number(s) < 10 ? '0' : ''}${s}`;
+  };
+
+  const s1 = (currentPaceSec * 0.322).toFixed(3);
+  const s2 = (currentPaceSec * 0.324).toFixed(3);
+  const s3 = (currentPaceSec - Number(s1) - Number(s2)).toFixed(3);
+
+  const totalLaps = selectedCircuit.totalLaps;
+  const s1End = Math.max(10, Math.round(totalLaps * 0.30));
+  const s2End = Math.max(s1End + 10, Math.round(totalLaps * 0.70));
+  const s3Laps = totalLaps - s2End;
+  const s2Laps = s2End - s1End;
+
   return (
     <div id="page-command-center" className="space-y-6 pb-12">
       {/* Header Banner */}
@@ -81,14 +101,14 @@ export const CommandCenter: React.FC = () => {
               VALIDATED
             </span>
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">1:23.412s</div>
+          <div className="text-2xl font-black text-white tracking-tight">{formatLapTime(currentPaceSec)}s</div>
           <div className="text-[11px] text-[#00d2ff] font-semibold mt-1">
-            +0.133s vs optimal (1:23.279)
+            +0.133s vs optimal ({formatLapTime(basePace)})
           </div>
           <div className="text-[10px] text-[#55677d] mt-2 pt-2 border-t border-[#172230] flex justify-between">
-            <span>S1: 26.812</span>
-            <span>S2: 26.940</span>
-            <span>S3: 29.660</span>
+            <span>S1: {s1}</span>
+            <span>S2: {s2}</span>
+            <span>S3: {s3}</span>
           </div>
         </div>
 
@@ -121,18 +141,18 @@ export const CommandCenter: React.FC = () => {
         {/* Metric 3: Pace Degradation Rate */}
         <div className="bg-[#0d131c] p-4 rounded border border-[#1b2636] hover:border-[#27384e] transition-all">
           <div className="flex items-center justify-between text-[11px] text-[#6b7d93] mb-1">
-            <span>PACE DEGRADATION</span>
-            <span className="text-[9px] bg-[#2a0e12] text-[#ff4b4b] px-1.5 py-0.5 rounded border border-[#5e1e24] font-bold">
-              ACCELERATING
+            <span>PACE DEGRADATION RATE</span>
+            <span className="text-[9px] bg-[#22170c] text-amber-400 px-1.5 py-0.5 rounded border border-[#482e18] font-bold">
+              +0.078 s/lap
             </span>
           </div>
-          <div className="text-2xl font-black text-[#ff4b4b] tracking-tight">+0.078 s/lap</div>
+          <div className="text-2xl font-black text-white tracking-tight">+{selectedDriver.degRatePerLap.toFixed(3)} s/lap</div>
           <div className="text-[11px] text-[#ff8f8f] font-semibold mt-1">
             +0.026s vs baseline model
           </div>
           <div className="text-[10px] text-[#55677d] mt-2 pt-2 border-t border-[#172230] flex justify-between">
             <span>OVERHEAT: 1.18x</span>
-            <span className="text-[#ff4b4b] font-bold">CROSSOVER: L38.4</span>
+            <span className="text-[#ff4b4b] font-bold">CROSSOVER: L{selectedCircuit.cliffLapThreshold}</span>
           </div>
         </div>
 
@@ -144,12 +164,12 @@ export const CommandCenter: React.FC = () => {
               31% USABLE
             </span>
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">14 LAPS</div>
+          <div className="text-2xl font-black text-white tracking-tight">{Math.max(1, Math.round(selectedCircuit.cliffLapThreshold - selectedDriver.tyreAge))} LAPS</div>
           <div className="text-[11px] text-[#00e5a3] font-semibold mt-1">
-            BOX STRATEGY VALID • L37-39 Window
+            BOX STRATEGY VALID • L{s2End - 1}-{s2End + 1} Window
           </div>
           <div className="text-[10px] text-[#55677d] mt-2 pt-2 border-t border-[#172230] flex justify-between">
-            <span>RACE REMAIN: 19 LAPS</span>
+            <span>RACE REMAIN: {Math.max(0, totalLaps - currentLap)} LAPS</span>
             <span className="text-cyan-400 font-bold">NEXT: C2 HARD</span>
           </div>
         </div>
@@ -163,7 +183,7 @@ export const CommandCenter: React.FC = () => {
               RACE TIMELINE &amp; STINT ARCHITECTURE
             </h3>
             <span className="text-[10px] text-[#5e7086]">
-              Total Distance: 53 Laps, 306.72 km • Pit Lane Transit Delta: 21.4s
+              Total Distance: {totalLaps} Laps, {selectedCircuit.totalDistanceKm} km • Pit Lane Transit Delta: 21.4s
             </span>
           </div>
           <span className="text-[10px] text-[#38bdf8] bg-[#101b29] px-2 py-0.5 rounded border border-[#1d2f46]">
@@ -174,55 +194,52 @@ export const CommandCenter: React.FC = () => {
         {/* Visual Multi-Segment Stint Bar */}
         <div className="space-y-2">
           <div className="h-9 w-full bg-[#080d14] rounded overflow-hidden flex border border-[#182434] p-1 gap-1">
-            {/* Stint 1: Soft (L1-16) */}
+            {/* Stint 1: Soft */}
             <div
               className="bg-gradient-to-r from-red-600 to-red-500 rounded-sm h-full flex items-center justify-center text-[10px] text-white font-bold px-2 relative group cursor-pointer"
-              style={{ width: `${(16 / 53) * 100}%` }}
-              title="Stint 1: C4 Soft, 16 Laps Completed (Pit Lap 16)"
+              style={{ width: `${(s1End / totalLaps) * 100}%` }}
+              title={`Stint 1: C4 Soft, ${s1End} Laps Completed (Pit Lap ${s1End})`}
             >
-              <span>STINT 1: SOFT [16L]</span>
+              <span>STINT 1: SOFT [{s1End}L]</span>
             </div>
 
-            {/* Stint 2: Medium (L17-38) */}
+            {/* Stint 2: Medium */}
             <div
               className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-sm h-full flex items-center justify-between text-[10px] text-black font-extrabold px-3 relative group cursor-pointer"
-              style={{ width: `${(22 / 53) * 100}%` }}
-              title="Stint 2: C3 Medium, Active 18 Laps, Target Pit Lap 38"
+              style={{ width: `${(s2Laps / totalLaps) * 100}%` }}
+              title={`Stint 2: C3 Medium, Active ${s2Laps} Laps, Target Pit Lap ${s2End}`}
             >
-              <span>STINT 2: MEDIUM [ACTIVE L17-38]</span>
-              <span className="bg-black/40 text-white px-1 rounded text-[9px]">NOW: L34</span>
+              <span>STINT 2: MEDIUM [ACTIVE L{s1End + 1}-{s2End}]</span>
+              <span className="bg-black/40 text-white px-1 rounded text-[9px]">NOW: L{currentLap}</span>
             </div>
 
             {/* Pit Window Indicator Bracket */}
             <div
               className="bg-emerald-500/20 border border-emerald-400 border-dashed rounded-sm h-full flex items-center justify-center text-[9px] text-emerald-300 font-bold px-1"
-              style={{ width: `${(3 / 53) * 100}%` }}
-              title="Pit Window: Lap 37-39"
+              style={{ width: `${(2 / totalLaps) * 100}%` }}
+              title={`Pit Window: Lap ${s2End - 1}-${s2End + 1}`}
             >
               BOX
             </div>
 
-            {/* Stint 3: Hard (L39-53) */}
+            {/* Stint 3: Hard */}
             <div
               className="bg-gradient-to-r from-cyan-600 to-slate-400 rounded-sm h-full flex items-center justify-center text-[10px] text-white font-bold px-2 relative group cursor-pointer"
-              style={{ width: `${(15 / 53) * 100}%` }}
-              title="Stint 3: C2 Hard (Projected 15 Laps to flag)"
+              style={{ width: `${(s3Laps / totalLaps) * 100}%` }}
+              title={`Stint 3: C2 Hard (Projected ${s3Laps} Laps to flag)`}
             >
-              <span>STINT 3: HARD (PROJ 15L)</span>
+              <span>STINT 3: HARD (PROJ {s3Laps}L)</span>
             </div>
           </div>
 
           {/* Lap Markers Axis */}
           <div className="flex justify-between text-[10px] text-[#55677d] px-1">
             <span>LAP 01 [START]</span>
-            <span>LAP 10</span>
-            <span>LAP 16 [BOX 1]</span>
-            <span>LAP 20</span>
-            <span>LAP 30</span>
-            <span className="text-[#00d2ff] font-bold">LAP 34 [CURRENT]</span>
-            <span className="text-[#00e5a3] font-bold">LAP 38 [TARGET PIT]</span>
-            <span>LAP 45</span>
-            <span className="text-white font-bold">LAP 53 [FLAG]</span>
+            <span>LAP {Math.round(totalLaps * 0.2)}</span>
+            <span>LAP {s1End} [BOX 1]</span>
+            <span>LAP {Math.round(totalLaps * 0.5)}</span>
+            <span>LAP {s2End} [TARGET BOX 2]</span>
+            <span>LAP {totalLaps} [FINISH]</span>
           </div>
         </div>
       </div>
