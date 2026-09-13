@@ -99,7 +99,7 @@ export const StintAnalysis: React.FC = () => {
     });
   }, [rawStints, currentLap, fuelCorrectionEnabled, trackEvoCorrectionEnabled]);
 
-  // Generate lap-by-lap pace series for multi-stint kinetics chart
+  // Generate lap-by-lap pace series using TrueWear's non-linear logarithmic & exponential formulation
   const paceKineticsData = useMemo(() => {
     const totalLaps = selectedCircuit.totalLaps;
     const basePace = selectedCircuit.baseLapTimeSeconds + driverPaceOffset;
@@ -116,23 +116,51 @@ export const StintAnalysis: React.FC = () => {
     }> = [];
 
     stints.forEach((stint) => {
+      const cliffThreshold =
+        selectedCircuit.cliffLapThreshold *
+        (stint.compound === 'SOFT' ? 0.48 : stint.compound === 'MEDIUM' ? 0.76 : 1.08);
+
       for (let lap = stint.startLap; lap <= stint.endLap; lap++) {
         const tyreAge = lap - stint.startLap + 1;
         const compoundFactor =
-          stint.compound === 'SOFT' ? 0.092 : stint.compound === 'MEDIUM' ? 0.065 : 0.038;
-        
-        // Non-linear degradation curve (exponential acceleration as tyres near cliff)
-        const cliffThreshold = selectedCircuit.cliffLapThreshold * (stint.compound === 'SOFT' ? 0.5 : stint.compound === 'MEDIUM' ? 0.75 : 1.1);
-        const cliffRatio = tyreAge / cliffThreshold;
-        const cliffDeg = cliffRatio > 0.85 ? Math.pow(cliffRatio - 0.85, 2) * 2.8 : 0;
-        
-        const rawDeg = tyreAge * compoundFactor + cliffDeg;
-        const fuelBurnGain = (totalLaps - lap) * 0.052; // heavier at start
-        const trackRubberGrip = Math.log(lap + 1) * 0.045; // grip improves with race
-        const trafficRandom = trafficDecouplingEnabled ? 0 : Math.sin(lap * 1.7) * 0.08;
+          stint.compound === 'SOFT' ? 0.096 : stint.compound === 'MEDIUM' ? 0.064 : 0.036;
 
-        const observedPace = basePace + rawDeg - (fuelCorrectionEnabled ? 0 : fuelBurnGain) - (trackEvoCorrectionEnabled ? 0 : trackRubberGrip) + trafficRandom;
-        const fuelCorrectedPace = basePace + rawDeg;
+        // 1. Logarithmic initial surface scrub-in & thermal settling (first 3-4 laps rapid transient)
+        const scrubInLog = Math.log(tyreAge + 1) * 0.11 * (stint.compound === 'SOFT' ? 1.35 : stint.compound === 'MEDIUM' ? 1.0 : 0.7);
+
+        // 2. Progressive non-linear polymer wear
+        const progressiveWear = Math.pow(tyreAge / 10, 1.28) * compoundFactor * 8.5;
+
+        // 3. Exponential thermal cliff breakdown when tyre age approaches and exceeds cliff threshold
+        const cliffExcess = Math.max(0, tyreAge - (cliffThreshold - 3));
+        const exponentialCliff =
+          cliffExcess > 0
+            ? (Math.exp(cliffExcess * 0.38) - 1) * (stint.compound === 'SOFT' ? 0.16 : 0.09)
+            : 0;
+
+        const trueDegDelta = scrubInLog + progressiveWear + exponentialCliff;
+
+        // 4. Fuel mass shedding (~1.7kg/lap = ~0.058s speedup per lap into race)
+        const fuelGain = (lap - 1) * 0.054;
+
+        // 5. Strict logarithmic track rubbering-in & grip evolution: δ_track · ln(lap + 1)
+        const trackGripEvolutionLog = Math.log(lap + 1) * 0.042;
+
+        // 6. Realistic stochastic noise & aerodynamic slipstream wake
+        const stochasticNoise = trafficDecouplingEnabled
+          ? 0
+          : Math.sin(lap * 2.83 + stint.stintNumber * 1.7) * 0.032 + Math.cos(lap * 0.95) * 0.018;
+
+        // Observed Pace = base + trueWear - fuelBurn - trackEvo + traffic/noise
+        const observedPace =
+          basePace +
+          trueDegDelta -
+          (fuelCorrectionEnabled ? 0 : fuelGain) -
+          (trackEvoCorrectionEnabled ? 0 : trackGripEvolutionLog) +
+          stochasticNoise;
+
+        // Fuel-Corrected Pace decouples fuel burn and track evolution to reveal pure tyre wear kinetics
+        const fuelCorrectedPace = basePace + trueDegDelta;
 
         data.push({
           lap,
@@ -142,7 +170,7 @@ export const StintAnalysis: React.FC = () => {
           tyreAge,
           observedPace: Number(observedPace.toFixed(3)),
           fuelCorrectedPace: Number(fuelCorrectedPace.toFixed(3)),
-          trueDegDelta: Number(rawDeg.toFixed(3)),
+          trueDegDelta: Number(trueDegDelta.toFixed(3)),
           isPitLap: lap === stint.endLap && stint.stintNumber < stints.length,
         });
       }
@@ -164,8 +192,8 @@ export const StintAnalysis: React.FC = () => {
       return { minPace: 80, maxPace: 90, chartLaps: 53 };
     }
     const paces = paceKineticsData.map((d) => (fuelCorrectionEnabled ? d.fuelCorrectedPace : d.observedPace));
-    const min = Math.min(...paces) - 0.4;
-    const max = Math.max(...paces) + 0.5;
+    const min = Math.min(...paces) - 0.35;
+    const max = Math.max(...paces) + 0.45;
     return {
       minPace: min,
       maxPace: max,
@@ -183,17 +211,34 @@ export const StintAnalysis: React.FC = () => {
   const scaleX = (lap: number) => padding.left + ((lap - 1) / Math.max(1, chartLaps - 1)) * graphWidth;
   const scaleY = (pace: number) => padding.top + (1 - (pace - minPace) / Math.max(0.1, maxPace - minPace)) * graphHeight;
 
-  // Generate SVG path for a specific stint
+  // Generate smooth curved SVG path for a specific stint using Catmull-Rom or cubic Bezier smoothing
   const generateStintPath = (stintNum: number) => {
     const stintPoints = paceKineticsData.filter((d) => d.stintNumber === stintNum);
     if (stintPoints.length === 0) return '';
-    return stintPoints
-      .map((d, i) => {
-        const x = scaleX(d.lap);
-        const y = scaleY(fuelCorrectionEnabled ? d.fuelCorrectedPace : d.observedPace);
-        return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-      })
-      .join(' ');
+
+    const pts = stintPoints.map((d) => ({
+      x: scaleX(d.lap),
+      y: scaleY(fuelCorrectionEnabled ? d.fuelCorrectedPace : d.observedPace),
+    }));
+
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+
+    let path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = i > 0 ? pts[i - 1] : pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
+
+      // Catmull-Rom to Cubic Bezier conversion
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+    return path;
   };
 
   const getCompoundColor = (compound: TyreCompound) => {
@@ -305,7 +350,7 @@ export const StintAnalysis: React.FC = () => {
             <Sparkles className="w-5 h-5 text-cyan-400" />
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Normalized tyre degradation curves across compounds, fuel mass burn-off offsets, and thermal cliff trajectories for{' '}
+            Physics-informed tyre degradation: Logarithmic track evolution $\delta \ln(n)$, initial scrub-in kinetics, fuel burn-off, and non-linear thermal cliff for{' '}
             <span className="text-cyan-300 font-semibold">{selectedCircuit.name}</span>.
           </p>
         </div>
@@ -592,10 +637,10 @@ export const StintAnalysis: React.FC = () => {
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Gauge className="w-4 h-4 text-cyan-400" />
-              Lap-by-Lap Stint Kinetics & Pace Evolution
+              Non-Linear Stint Pace Dynamics & Kinetics
             </h2>
             <p className="text-xs text-slate-400">
-              Comparing raw pace degradation slopes across all stints on {selectedCircuit.name} (Total {selectedCircuit.totalLaps} Laps).
+              Logarithmic rubber deposition, polymer loss curves, and thermal cliff trajectories across all stints on {selectedCircuit.name} (Total {selectedCircuit.totalLaps} Laps).
             </p>
           </div>
 
@@ -730,32 +775,32 @@ export const StintAnalysis: React.FC = () => {
               );
             })}
 
-            {/* Stint 1 Line (Soft) */}
+            {/* Stint 1 Curve (Soft) */}
             <path
               d={generateStintPath(1)}
               fill="none"
               stroke="#ef4444"
-              strokeWidth={compoundFilter === 'SOFT' || compoundFilter === 'ALL' ? '2.5' : '1'}
+              strokeWidth={compoundFilter === 'SOFT' || compoundFilter === 'ALL' ? '3' : '1'}
               strokeOpacity={compoundFilter === 'SOFT' || compoundFilter === 'ALL' ? 1 : 0.25}
               strokeLinecap="round"
             />
 
-            {/* Stint 2 Line (Medium) */}
+            {/* Stint 2 Curve (Medium) */}
             <path
               d={generateStintPath(2)}
               fill="none"
               stroke="#eab308"
-              strokeWidth={compoundFilter === 'MEDIUM' || compoundFilter === 'ALL' ? '2.5' : '1'}
+              strokeWidth={compoundFilter === 'MEDIUM' || compoundFilter === 'ALL' ? '3' : '1'}
               strokeOpacity={compoundFilter === 'MEDIUM' || compoundFilter === 'ALL' ? 1 : 0.25}
               strokeLinecap="round"
             />
 
-            {/* Stint 3 Line (Hard) */}
+            {/* Stint 3 Curve (Hard) */}
             <path
               d={generateStintPath(3)}
               fill="none"
               stroke="#f8fafc"
-              strokeWidth={compoundFilter === 'HARD' || compoundFilter === 'ALL' ? '2.5' : '1'}
+              strokeWidth={compoundFilter === 'HARD' || compoundFilter === 'ALL' ? '3' : '1'}
               strokeOpacity={compoundFilter === 'HARD' || compoundFilter === 'ALL' ? 1 : 0.25}
               strokeLinecap="round"
             />
@@ -819,7 +864,7 @@ export const StintAnalysis: React.FC = () => {
                   <circle
                     cx={x}
                     cy={y}
-                    r={isHovered ? 6 : isCurrent ? 4 : 2}
+                    r={isHovered ? 6 : isCurrent ? 4 : 2.5}
                     fill={isHovered ? '#38bdf8' : color}
                     stroke="#0f172a"
                     strokeWidth={isHovered || isCurrent ? 2 : 0.5}
@@ -858,7 +903,7 @@ export const StintAnalysis: React.FC = () => {
                 Fuel-Corrected Pace: <strong className="text-emerald-400">{activeHoverData.fuelCorrectedPace}s</strong>
               </span>
               <span>
-                Deg Delta: <strong className="text-amber-400">+{activeHoverData.trueDegDelta}s</strong>
+                True Deg Delta: <strong className="text-amber-400">+{activeHoverData.trueDegDelta}s</strong>
               </span>
             </div>
           </div>
