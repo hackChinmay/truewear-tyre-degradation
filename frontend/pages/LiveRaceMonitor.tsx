@@ -218,14 +218,14 @@ export const LiveRaceMonitor: React.FC = () => {
             className="bg-[#ff2a2a] hover:bg-[#e02424] text-white px-3.5 py-1.5 rounded font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-red-950/40"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>CONFIRM PLAN A (BOX L38)</span>
+            <span>CONFIRM PLAN A </span>
           </button>
           <button
             onClick={handleExtendStint}
             className="bg-[#121c2a] hover:bg-[#1a293c] text-[#8fa2b8] hover:text-white px-3 py-1.5 rounded text-xs border border-[#23354b] flex items-center gap-1.5 transition-all"
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>EXTEND TO L41</span>
+            <span>EXTEND TO PLAN B</span>
           </button>
         </div>
       </div>
