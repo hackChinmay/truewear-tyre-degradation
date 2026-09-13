@@ -1,6 +1,7 @@
 # 🏎️ TRUEWEAR // Tyre Degradation & Pit Strategy Decision Support System
 
-[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![Live Dashboard](https://img.shields.io/badge/Live%20Deployment-truewear--pitwall.vercel.app-black?style=flat-square&logo=vercel&logoColor=white)](https://truewear-pitwall.vercel.app/live)
+[![Demo Video](https://img.shields.io/badge/Demo%20Video-Google%20Drive-4285F4?style=flat-square&logo=googledrive&logoColor=white)](https://drive.google.com/file/d/1YqD_RcQR2Xl7TX_PWjdJWe7kEK-7TIR8/view?usp=drive_link)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -10,6 +11,13 @@
 [![Status](https://img.shields.io/badge/Status-TrackShift%202026%20Engineering%20Candidate-green.svg)](LICENSE)
 
 > **TrueWear** is a physics-informed, probabilistic, online-adaptive tyre intelligence and race-strategy decision-support system designed for Formula 1 motorsport engineering. It decouples latent confounding variables (fuel-burn mass reduction, asphalt rubbering-in, aerodynamic dirty-air wash) from timing telemetry, delivers P10 / P50 / P90 heteroscedastic uncertainty intervals, computes cumulative Gaussian tyre-cliff probabilities, and drives a 500-iteration Monte Carlo strategy engine with fully explainable pit-wall directives.
+
+---
+
+### 🌐 Live Production Links
+* **🏎️ Live Interactive Dashboard (Vercel)**: [https://truewear-pitwall.vercel.app/live](https://truewear-pitwall.vercel.app/live)
+* **🎥 Video Walkthrough & System Demo (Google Drive)**: [Watch Demo Video](https://drive.google.com/file/d/1YqD_RcQR2Xl7TX_PWjdJWe7kEK-7TIR8/view?usp=drive_link)
+* **⚡ FastAPI Telemetry Backend (Render)**: [https://truewear-api.onrender.com](https://truewear-api.onrender.com)
 
 ---
 
