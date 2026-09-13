@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRace } from '../context/RaceContext';
 import { evaluateInternalModelBaselines } from '../services/degradationModel';
+import { API_BASE_URL } from '../config/api';
 import {
   Activity,
   AlertTriangle,
@@ -26,6 +27,8 @@ export const ModelDiagnostics: React.FC = () => {
     currentLap,
     triggerActionNotification,
     navigateTo,
+    connectFastF1Backend,
+    providerStatus,
   } = useRace();
 
   const [wearAlpha, setWearAlpha] = useState(1.38);
@@ -35,7 +38,7 @@ export const ModelDiagnostics: React.FC = () => {
   const [trackEvoDelta, setTrackEvoDelta] = useState(0.038);
 
   const [isApplying, setIsApplying] = useState(false);
-  const [fastf1Url, setFastf1Url] = useState(import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1');
+  const [fastf1Url, setFastf1Url] = useState(API_BASE_URL);
   const [isConnecting, setIsConnecting] = useState(false);
   const [showPythonSpec, setShowPythonSpec] = useState(false);
   const [hasCopiedCode, setHasCopiedCode] = useState(false);

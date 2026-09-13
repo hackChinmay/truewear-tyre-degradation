@@ -15,6 +15,7 @@ import {
 } from './types';
 import { DemoRaceDataProvider } from './demoProvider';
 import { WHEEL_TELEMETRY_DATA } from '../../data/mockRaceData';
+import { API_BASE_URL } from '../../config/api';
 
 export interface FastF1HttpProviderConfig {
   baseUrl: string;
@@ -23,7 +24,7 @@ export interface FastF1HttpProviderConfig {
 }
 
 export const DEFAULT_FASTF1_CONFIG: FastF1HttpProviderConfig = {
-  baseUrl: '/api/fastf1',
+  baseUrl: API_BASE_URL,
   fallbackToDemoOnFailure: true,
   timeoutMs: 5000,
 };

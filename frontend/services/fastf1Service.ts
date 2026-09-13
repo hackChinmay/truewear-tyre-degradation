@@ -19,6 +19,7 @@ import {
   FastF1HttpRaceDataProvider,
   PYTHON_FASTF1_BACKEND_CODE,
 } from './raceDataProvider';
+import { API_BASE_URL } from '../config/api';
 
 export interface FastF1EndpointConfig {
   baseUrl: string;
@@ -28,7 +29,7 @@ export interface FastF1EndpointConfig {
 }
 
 export const defaultFastF1Config: FastF1EndpointConfig = {
-  baseUrl: '/api/fastf1',
+  baseUrl: API_BASE_URL,
   useDemoData: true,
   cacheTtlMs: 60000,
 };
@@ -59,7 +60,7 @@ export class FastF1Bridge {
    * Switch active data provider
    */
   connectToPythonFastF1(baseUrl?: string): void {
-    const targetUrl = baseUrl || import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
+    const targetUrl = baseUrl || API_BASE_URL;
     setRaceDataProvider(new FastF1HttpRaceDataProvider({ baseUrl: targetUrl }));
   }
 

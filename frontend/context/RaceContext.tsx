@@ -28,8 +28,10 @@ import {
   getRaceDataProvider,
   setRaceDataProvider,
   DemoRaceDataProvider,
+  LiveOpenF1DataProvider,
   FastF1HttpRaceDataProvider,
 } from '../services/raceDataProvider';
+import { API_BASE_URL } from '../config/api';
 import { TrackPointTelemetry, getCircuitTrackTelemetry } from '../utils/circuitTrackData';
 import {
   WeatherSimulationState,
@@ -189,8 +191,7 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Auto-probe FastF1 daemon on load
     if (dataProvider.isDemo) {
-      const initialApiUrl = import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
-      connectFastF1Backend(initialApiUrl).catch(() => {});
+      connectFastF1Backend(API_BASE_URL).catch(() => {});
     }
 
     return () => {
@@ -206,7 +207,7 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const connectFastF1Backend = async (baseUrl?: string): Promise<boolean> => {
-    const targetUrl = baseUrl || import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
+    const targetUrl = baseUrl || API_BASE_URL;
     const httpProvider = new FastF1HttpRaceDataProvider({ baseUrl: targetUrl, fallbackToDemoOnFailure: true });
     const status = await httpProvider.getProviderStatus();
     switchDataProvider(httpProvider);
@@ -235,8 +236,7 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const useDemoDataProvider = () => {
-    const targetUrl = import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
-    connectFastF1Backend(targetUrl);
+    connectFastF1Backend(API_BASE_URL);
     triggerActionNotification('Re-syncing FastF1 Python telemetry pipeline.', 'info');
   };
 
