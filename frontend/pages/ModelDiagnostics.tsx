@@ -242,7 +242,7 @@ export const ModelDiagnostics: React.FC = () => {
             </span>{' '}
             -{' '}
             <span className="text-[#00e5a3] bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-900">
-              γ<sub className="text-[9px]">fuel</sub> · (M<sub className="text-[9px]">0</sub> - ṁ·n)
+              γ<sub className="text-[9px]">fuel</sub> · (ṁ·n)
             </span>{' '}
             -{' '}
             <span className="text-[#38bdf8] bg-sky-950/40 px-1.5 py-0.5 rounded border border-sky-900">
