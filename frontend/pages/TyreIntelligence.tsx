@@ -35,6 +35,7 @@ export const TyreIntelligence: React.FC = () => {
     setTrackEvoCorrectionEnabled,
     trafficDecouplingEnabled,
     setTrafficDecouplingEnabled,
+    weatherState,
     navigateTo,
     triggerActionNotification,
   } = useRace();
@@ -324,7 +325,12 @@ export const TyreIntelligence: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-          {getCircuitConfoundingFactors(selectedCircuit.id).slice(0, 4).map((f) => (
+          {getCircuitConfoundingFactors(
+            selectedCircuit.id,
+            currentLap,
+            selectedCircuit.totalLaps,
+            weatherState.trackTemp
+          ).slice(0, 4).map((f) => (
             <div
               key={f.id}
               className="bg-[#0d131c] p-3.5 rounded border border-[#192435] flex flex-col justify-between"

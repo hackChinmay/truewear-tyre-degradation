@@ -16,7 +16,12 @@ import {
 export const TrackConditions: React.FC = () => {
   const { currentLap, selectedCircuit, weatherState, navigateTo } = useRace();
 
-  const confoundingFactors = getCircuitConfoundingFactors(selectedCircuit.id);
+  const confoundingFactors = getCircuitConfoundingFactors(
+    selectedCircuit.id,
+    currentLap,
+    selectedCircuit.totalLaps,
+    weatherState.trackTemp
+  );
 
   const airTempStr = `${weatherState.airTemp.toFixed(1)}°C`;
   const trackTempStr = `${weatherState.trackTemp.toFixed(1)}°C`;
@@ -219,19 +224,42 @@ export const TrackConditions: React.FC = () => {
       {/* Decoupled Confounding Factor Shares */}
       <div className="bg-[#0b1017] p-4 rounded border border-[#1b2536]">
         <div className="flex items-center justify-between pb-3 border-b border-[#182333] mb-4">
-          <h3 className="text-xs font-bold text-white tracking-wider uppercase">
-            CONFOUNDING FACTORS SEPARATION // 5 LATENT VARIABLES DECOUPLED
-          </h3>
-          <span className="text-[10px] text-[#00e5a3]">KALMAN MULTI-VARIATE FILTER</span>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold text-white tracking-wider uppercase">
+              CONFOUNDING FACTORS SEPARATION // 5 LATENT VARIABLES DECOUPLED
+            </h3>
+            <span className="text-[9px] bg-[#162335] text-[#38bdf8] px-2 py-0.5 rounded border border-[#233852] font-bold">
+              LAP {currentLap}/{selectedCircuit.totalLaps} LIVE
+            </span>
+          </div>
+          <span className="text-[10px] text-[#00e5a3] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00e5a3] animate-pulse"></span>
+            KALMAN MULTI-VARIATE FILTER
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           {confoundingFactors.map((factor) => (
-            <div key={factor.id} className="bg-[#0d131c] p-3 rounded border border-[#182333]">
-              <span className="text-[10px] text-[#55677d] block font-bold truncate">{factor.name}</span>
-              <div className="text-lg font-black text-white mt-1">{factor.sharePercentage}%</div>
-              <span className="text-[10px] text-[#00d2ff] block mt-0.5">{factor.impactValueStr}</span>
-              <p className="text-[9px] text-[#718296] mt-2 leading-relaxed">{factor.description}</p>
+            <div key={factor.id} className="bg-[#0d131c] p-3 rounded border border-[#182333] flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-1 pb-1 border-b border-[#141d2a] mb-1.5">
+                  <span className="text-[10px] text-[#55677d] font-bold truncate">{factor.name}</span>
+                  <span
+                    className={`text-[8px] px-1 py-0.2 rounded font-bold border ${
+                      factor.severity === 'CRITICAL'
+                        ? 'bg-red-950/40 text-red-400 border-red-800'
+                        : factor.severity === 'HIGH'
+                        ? 'bg-amber-950/40 text-amber-400 border-amber-800'
+                        : 'bg-emerald-950/40 text-emerald-400 border-emerald-800'
+                    }`}
+                  >
+                    {factor.impactLabel}
+                  </span>
+                </div>
+                <div className="text-lg font-black text-white mt-1">{factor.sharePercentage}%</div>
+                <span className="text-[10px] text-[#00d2ff] font-bold block mt-0.5">{factor.impactValueStr}</span>
+              </div>
+              <p className="text-[9px] text-[#718296] mt-2 leading-relaxed border-t border-[#121924] pt-1.5">{factor.description}</p>
             </div>
           ))}
         </div>

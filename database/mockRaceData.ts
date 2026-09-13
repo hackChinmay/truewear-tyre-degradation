@@ -1062,9 +1062,147 @@ export const CIRCUIT_CONFOUNDING_FACTORS: Record<string, ConfoundingFactorBreakd
   ],
 };
 
-export function getCircuitConfoundingFactors(circuitId: string): ConfoundingFactorBreakdown[] {
+export function getCircuitConfoundingFactors(
+  circuitId: string,
+  currentLap?: number,
+  totalLaps?: number,
+  trackTemp?: number
+): ConfoundingFactorBreakdown[] {
   const cid = (circuitId || 'monza').toLowerCase();
-  return CIRCUIT_CONFOUNDING_FACTORS[cid] || CIRCUIT_CONFOUNDING_FACTORS['monza'];
+  const baseFactors = CIRCUIT_CONFOUNDING_FACTORS[cid] || CIRCUIT_CONFOUNDING_FACTORS['monza'];
+
+  if (!currentLap || currentLap <= 0 || !totalLaps || totalLaps <= 0) {
+    return baseFactors;
+  }
+
+  const lap = Math.min(currentLap, totalLaps);
+  const raceProgress = lap / totalLaps; // 0.0 - 1.0
+
+  // Estimate stint lifecycle (assuming 1-stop strategy around 60% total laps)
+  const pitLap = Math.max(12, Math.round(totalLaps * 0.60));
+  const isStint2 = lap > pitLap;
+  const stintAge = isStint2 ? lap - pitLap : lap;
+  const maxStintLaps = isStint2 ? (totalLaps - pitLap) : pitLap;
+  const stintWearRatio = Math.min(1.0, stintAge / Math.max(1, maxStintLaps));
+
+  // 1. TYRE AGE (PRIMARY FACTOR)
+  const tyreDegMultiplier = 0.35 + 0.95 * Math.pow(stintWearRatio, 1.4);
+  const rawTyreShare = (baseFactors[0]?.sharePercentage ?? 40) * tyreDegMultiplier;
+  const baseTyreDelta = Math.abs(baseFactors[0]?.impactValueSeconds ?? 0.08);
+  const dynamicTyreDelta = baseTyreDelta * (0.45 + 0.85 * Math.pow(stintWearRatio, 1.2));
+
+  // 2. TRACK EVOLUTION
+  const evoMultiplier = Math.max(0.25, 1.35 - 1.1 * Math.pow(raceProgress, 0.7));
+  const rawEvoShare = (baseFactors[1]?.sharePercentage ?? 25) * evoMultiplier;
+  const baseEvoDelta = Math.abs(baseFactors[1]?.impactValueSeconds ?? 0.035);
+  const dynamicEvoDelta = baseEvoDelta * evoMultiplier;
+
+  // 3. TRAFFIC & DIRTY AIR
+  const isPitRejoinZone = Math.abs(lap - pitLap) <= 3;
+  const trafficMultiplier = lap <= 3
+    ? 1.45
+    : isPitRejoinZone
+    ? 1.35
+    : 0.65 + 0.5 * Math.sin(raceProgress * Math.PI * 3);
+  const rawTrafficShare = (baseFactors[2]?.sharePercentage ?? 12) * trafficMultiplier;
+  const baseTrafficDelta = Math.abs(baseFactors[2]?.impactValueSeconds ?? 0.40);
+  const dynamicTrafficDelta = baseTrafficDelta * (0.6 + 0.4 * trafficMultiplier);
+
+  // 4. FUEL LOAD PROXY
+  const fuelMultiplier = Math.max(0.18, 1.3 - 1.05 * raceProgress);
+  const rawFuelShare = (baseFactors[3]?.sharePercentage ?? 22) * fuelMultiplier;
+  const baseFuelDelta = Math.abs(baseFactors[3]?.impactValueSeconds ?? 0.055);
+  const dynamicFuelDelta = -baseFuelDelta * (0.3 + 0.7 * fuelMultiplier);
+  const fuelBurnedKg = (raceProgress * 105).toFixed(1);
+
+  // 5. SURFACE THERMAL GRADIENT
+  const currentTemp = trackTemp ?? 35;
+  const tempExcess = Math.max(0, currentTemp - 35);
+  const thermalMultiplier = (1.0 + (tempExcess / 15) * 0.45) * (0.8 + 0.4 * stintWearRatio);
+  const rawThermalShare = (baseFactors[4]?.sharePercentage ?? 20) * thermalMultiplier;
+  const baseThermalDelta = baseFactors[4]?.impactValueSeconds ?? 0.02;
+  const dynamicThermalDelta = baseThermalDelta * thermalMultiplier;
+
+  // Normalize shares to 100%
+  const totalRawShare = rawTyreShare + rawEvoShare + rawTrafficShare + rawFuelShare + rawThermalShare;
+  const normTyre = Number(((rawTyreShare / totalRawShare) * 100).toFixed(1));
+  const normEvo = Number(((rawEvoShare / totalRawShare) * 100).toFixed(1));
+  const normTraffic = Number(((rawTrafficShare / totalRawShare) * 100).toFixed(1));
+  const normFuel = Number(((rawFuelShare / totalRawShare) * 100).toFixed(1));
+  const normThermal = Number(Math.max(1, 100 - (normTyre + normEvo + normTraffic + normFuel)).toFixed(1));
+
+  return [
+    {
+      ...baseFactors[0],
+      sharePercentage: normTyre,
+      impactValueSeconds: Number(dynamicTyreDelta.toFixed(3)),
+      impactValueStr: `+${dynamicTyreDelta.toFixed(3)} s/lap`,
+      severity: stintWearRatio > 0.75 ? 'CRITICAL' : stintWearRatio > 0.45 ? 'HIGH' : 'MEDIUM',
+      description: `Lap ${lap} (${isStint2 ? 'Stint 2' : 'Stint 1'}, Age ${stintAge}L): ${
+        stintWearRatio > 0.75
+          ? 'Late-stint polymer fatigue; severe rapid degradation near thermal cliff.'
+          : stintWearRatio > 0.4
+          ? 'Intermediate compound wear; steady thermal hysteresis on loaded corner.'
+          : 'Fresh tyre phase; minimal structural wear and high grip retention.'
+      }`,
+    },
+    {
+      ...baseFactors[1],
+      sharePercentage: normEvo,
+      impactValueSeconds: Number((-dynamicEvoDelta).toFixed(3)),
+      impactValueStr: `+${dynamicEvoDelta.toFixed(3)} s/lap gain`,
+      severity: evoMultiplier > 0.8 ? 'HIGH' : 'MEDIUM',
+      description: `Lap ${lap}/${totalLaps}: Track ${(raceProgress * 100).toFixed(0)}% evolved. ${
+        raceProgress < 0.35
+          ? 'Aggressive rubber deposition rapidly building aggregate grip.'
+          : raceProgress < 0.75
+          ? 'Asphalt rubbering-in stabilizing across optimal racing line.'
+          : 'Grip index saturated near peak mechanical traction threshold.'
+      }`,
+    },
+    {
+      ...baseFactors[2],
+      sharePercentage: normTraffic,
+      impactValueSeconds: Number(dynamicTrafficDelta.toFixed(3)),
+      impactValueStr: `+${dynamicTrafficDelta.toFixed(3)} s delta`,
+      severity: trafficMultiplier > 1.2 ? 'CRITICAL' : trafficMultiplier > 0.9 ? 'HIGH' : 'MEDIUM',
+      description: `Lap ${lap}: ${
+        lap <= 3
+          ? 'Opening lap pack turbulence; heavy turbulent aero wash in dirty air.'
+          : isPitRejoinZone
+          ? 'Pit crossover phase; navigating mixed out-lap traffic and tire heat-up.'
+          : trafficMultiplier > 0.9
+          ? 'Trailing within DRS wake; loss of front downforce and shoulder slip.'
+          : 'Clean air pocket; unobstructed aerodynamic airflow across front wing.'
+      }`,
+    },
+    {
+      ...baseFactors[3],
+      sharePercentage: normFuel,
+      impactValueSeconds: Number(dynamicFuelDelta.toFixed(4)),
+      impactValueStr: `${dynamicFuelDelta.toFixed(4)} s/lap`,
+      severity: raceProgress < 0.4 ? 'HIGH' : 'MEDIUM',
+      description: `Lap ${lap}: Mass reduction ~${fuelBurnedKg} kg burned. ${
+        raceProgress < 0.35
+          ? 'High fuel payload significantly damping low-speed corner rotation.'
+          : raceProgress < 0.75
+          ? 'Linear burn-off progressively lightening chassis agility and braking.'
+          : 'Low fuel sprint mode; minimum vehicle weight maximizing apex speeds.'
+      }`,
+    },
+    {
+      ...baseFactors[4],
+      sharePercentage: normThermal,
+      impactValueSeconds: Number(dynamicThermalDelta.toFixed(3)),
+      impactValueStr: `${dynamicThermalDelta >= 0 ? '+' : ''}${dynamicThermalDelta.toFixed(3)} s thermal wear`,
+      severity: currentTemp > 38 ? 'HIGH' : 'MEDIUM',
+      description: `Lap ${lap}: Asphalt at ${currentTemp.toFixed(1)}°C. ${
+        currentTemp > 38
+          ? 'Elevated thermal gradient accelerates carcass heating and blister risk.'
+          : 'Surface temperature within optimal operating window.'
+      }`,
+    },
+  ];
 }
 
 export function getCircuitStintsData(

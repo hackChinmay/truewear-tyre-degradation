@@ -43,7 +43,9 @@ export const CommandCenter: React.FC = () => {
 
   const driverPaceOffset = (selectedDriver.position - 1) * 0.085;
   const basePace = selectedCircuit.baseLapTimeSeconds + driverPaceOffset;
-  const currentPaceSec = basePace + 0.133;
+  const currentPaceSec = selectedDriver.lastLapSeconds || (basePace + selectedDriver.degRatePerLap * selectedDriver.tyreAge);
+  const lapDeltaSec = currentPaceSec - basePace;
+  const lapDeltaSign = lapDeltaSec >= 0 ? '+' : '';
 
   const formatLapTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -51,15 +53,20 @@ export const CommandCenter: React.FC = () => {
     return `${m}:${Number(s) < 10 ? '0' : ''}${s}`;
   };
 
-  const s1 = (currentPaceSec * 0.322).toFixed(3);
-  const s2 = (currentPaceSec * 0.324).toFixed(3);
-  const s3 = (currentPaceSec - Number(s1) - Number(s2)).toFixed(3);
+  const s1 = selectedDriver.s1 ? Number(selectedDriver.s1).toFixed(3) : (currentPaceSec * 0.322).toFixed(3);
+  const s2 = selectedDriver.s2 ? Number(selectedDriver.s2).toFixed(3) : (currentPaceSec * 0.324).toFixed(3);
+  const s3 = selectedDriver.s3 ? Number(selectedDriver.s3).toFixed(3) : (currentPaceSec - Number(s1) - Number(s2)).toFixed(3);
 
   const totalLaps = selectedCircuit.totalLaps;
   const s1End = Math.max(10, Math.round(totalLaps * 0.30));
   const s2End = Math.max(s1End + 10, Math.round(totalLaps * 0.70));
   const s3Laps = totalLaps - s2End;
   const s2Laps = s2End - s1End;
+
+  const cliffThreshold = selectedCircuit.cliffLapThreshold || 34;
+  const usableLaps = Math.max(0, Math.round(cliffThreshold - selectedDriver.tyreAge));
+  const usablePct = Math.min(100, Math.max(0, Math.round((usableLaps / cliffThreshold) * 100)));
+  const degVsBaseline = selectedDriver.degRatePerLap - (selectedCircuit.baseLapTimeSeconds * 0.0006);
 
   return (
     <div id="page-command-center" className="space-y-6 pb-12">
@@ -97,13 +104,19 @@ export const CommandCenter: React.FC = () => {
         <div className="bg-[#0d131c] p-4 rounded border border-[#1b2636] hover:border-[#27384e] transition-all">
           <div className="flex items-center justify-between text-[11px] text-[#6b7d93] mb-1">
             <span>CURRENT LAP PACE</span>
-            <span className="text-[9px] bg-[#0c221a] text-[#00e5a3] px-1.5 py-0.5 rounded border border-[#184835] font-bold">
-              VALIDATED
+            <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold ${
+              selectedDriver.pitStatus === 'IN PIT'
+                ? 'bg-amber-950/40 text-amber-400 border-amber-800'
+                : selectedDriver.pitStatus === 'OUT LAP'
+                ? 'bg-cyan-950/40 text-cyan-400 border-cyan-800'
+                : 'bg-[#0c221a] text-[#00e5a3] border-[#184835]'
+            }`}>
+              {selectedDriver.pitStatus === 'IN PIT' ? 'PIT STOP' : selectedDriver.pitStatus === 'OUT LAP' ? 'OUT LAP' : 'VALIDATED'}
             </span>
           </div>
           <div className="text-2xl font-black text-white tracking-tight">{formatLapTime(currentPaceSec)}s</div>
           <div className="text-[11px] text-[#00d2ff] font-semibold mt-1">
-            +0.133s vs optimal ({formatLapTime(basePace)})
+            {lapDeltaSign}{lapDeltaSec.toFixed(3)}s vs optimal ({formatLapTime(basePace)})
           </div>
           <div className="text-[10px] text-[#55677d] mt-2 pt-2 border-t border-[#172230] flex justify-between">
             <span>S1: {s1}</span>
@@ -142,17 +155,19 @@ export const CommandCenter: React.FC = () => {
         <div className="bg-[#0d131c] p-4 rounded border border-[#1b2636] hover:border-[#27384e] transition-all">
           <div className="flex items-center justify-between text-[11px] text-[#6b7d93] mb-1">
             <span>PACE DEGRADATION RATE</span>
-            <span className="text-[9px] bg-[#22170c] text-amber-400 px-1.5 py-0.5 rounded border border-[#482e18] font-bold">
-              +0.078 s/lap
+            <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold ${
+              selectedDriver.degRatePerLap > 0.08 ? 'bg-red-950/40 text-red-400 border-red-800' : 'bg-[#22170c] text-amber-400 border-[#482e18]'
+            }`}>
+              +{selectedDriver.degRatePerLap.toFixed(3)} s/lap
             </span>
           </div>
           <div className="text-2xl font-black text-white tracking-tight">+{selectedDriver.degRatePerLap.toFixed(3)} s/lap</div>
           <div className="text-[11px] text-[#ff8f8f] font-semibold mt-1">
-            +0.026s vs baseline model
+            {degVsBaseline >= 0 ? '+' : ''}{degVsBaseline.toFixed(3)}s vs baseline model
           </div>
           <div className="text-[10px] text-[#55677d] mt-2 pt-2 border-t border-[#172230] flex justify-between">
-            <span>OVERHEAT: 1.18x</span>
-            <span className="text-[#ff4b4b] font-bold">CROSSOVER: L{selectedCircuit.cliffLapThreshold}</span>
+            <span>OVERHEAT: {(1.0 + (selectedDriver.tyreAge / cliffThreshold) * 0.35).toFixed(2)}x</span>
+            <span className="text-[#ff4b4b] font-bold">CROSSOVER: L{cliffThreshold}</span>
           </div>
         </div>
 
@@ -160,13 +175,15 @@ export const CommandCenter: React.FC = () => {
         <div className="bg-[#0d131c] p-4 rounded border border-[#1b2636] hover:border-[#27384e] transition-all">
           <div className="flex items-center justify-between text-[11px] text-[#6b7d93] mb-1">
             <span>TYRE RESIDUAL LIFE</span>
-            <span className="text-[9px] bg-[#11241a] text-[#00e5a3] px-1.5 py-0.5 rounded border border-[#1b4d37] font-bold">
-              31% USABLE
+            <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold ${
+              usablePct < 25 ? 'bg-red-950/40 text-red-400 border-red-800' : 'bg-[#11241a] text-[#00e5a3] border-[#1b4d37]'
+            }`}>
+              {usablePct}% USABLE
             </span>
           </div>
-          <div className="text-2xl font-black text-white tracking-tight">{Math.max(1, Math.round(selectedCircuit.cliffLapThreshold - selectedDriver.tyreAge))} LAPS</div>
+          <div className="text-2xl font-black text-white tracking-tight">{usableLaps} LAPS</div>
           <div className="text-[11px] text-[#00e5a3] font-semibold mt-1">
-            BOX STRATEGY VALID • L{s2End - 1}-{s2End + 1} Window
+            {usableLaps <= 3 ? 'CRITICAL PIT WINDOW ACTIVE' : `BOX STRATEGY VALID • L${s2End - 1}-${s2End + 1} Window`}
           </div>
           <div className="text-[10px] text-[#55677d] mt-2 pt-2 border-t border-[#172230] flex justify-between">
             <span>RACE REMAIN: {Math.max(0, totalLaps - currentLap)} LAPS</span>
@@ -196,21 +213,30 @@ export const CommandCenter: React.FC = () => {
           <div className="h-9 w-full bg-[#080d14] rounded overflow-hidden flex border border-[#182434] p-1 gap-1">
             {/* Stint 1: Soft */}
             <div
-              className="bg-gradient-to-r from-red-600 to-red-500 rounded-sm h-full flex items-center justify-center text-[10px] text-white font-bold px-2 relative group cursor-pointer"
+              className="bg-gradient-to-r from-red-600 to-red-500 rounded-sm h-full flex items-center justify-between text-[10px] text-white font-bold px-2 relative group cursor-pointer"
               style={{ width: `${(s1End / totalLaps) * 100}%` }}
-              title={`Stint 1: C4 Soft, ${s1End} Laps Completed (Pit Lap ${s1End})`}
+              title={`Stint 1: C4 Soft, ${s1End} Laps (Pit Lap ${s1End})`}
             >
               <span>STINT 1: SOFT [{s1End}L]</span>
+              {currentLap <= s1End && (
+                <span className="bg-black/60 text-white px-1.5 py-0.5 rounded text-[9px] border border-white/20 animate-pulse">
+                  NOW: L{currentLap}
+                </span>
+              )}
             </div>
 
             {/* Stint 2: Medium */}
             <div
               className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-sm h-full flex items-center justify-between text-[10px] text-black font-extrabold px-3 relative group cursor-pointer"
               style={{ width: `${(s2Laps / totalLaps) * 100}%` }}
-              title={`Stint 2: C3 Medium, Active ${s2Laps} Laps, Target Pit Lap ${s2End}`}
+              title={`Stint 2: C3 Medium, ${s2Laps} Laps, Target Pit Lap ${s2End}`}
             >
-              <span>STINT 2: MEDIUM [ACTIVE L{s1End + 1}-{s2End}]</span>
-              <span className="bg-black/40 text-white px-1 rounded text-[9px]">NOW: L{currentLap}</span>
+              <span>STINT 2: MEDIUM [L{s1End + 1}-{s2End}]</span>
+              {currentLap > s1End && currentLap <= s2End && (
+                <span className="bg-black/80 text-amber-300 px-1.5 py-0.5 rounded text-[9px] border border-amber-400/40 animate-pulse">
+                  NOW: L{currentLap}
+                </span>
+              )}
             </div>
 
             {/* Pit Window Indicator Bracket */}
@@ -224,11 +250,16 @@ export const CommandCenter: React.FC = () => {
 
             {/* Stint 3: Hard */}
             <div
-              className="bg-gradient-to-r from-cyan-600 to-slate-400 rounded-sm h-full flex items-center justify-center text-[10px] text-white font-bold px-2 relative group cursor-pointer"
+              className="bg-gradient-to-r from-cyan-600 to-slate-400 rounded-sm h-full flex items-center justify-between text-[10px] text-white font-bold px-2 relative group cursor-pointer"
               style={{ width: `${(s3Laps / totalLaps) * 100}%` }}
               title={`Stint 3: C2 Hard (Projected ${s3Laps} Laps to flag)`}
             >
               <span>STINT 3: HARD (PROJ {s3Laps}L)</span>
+              {currentLap > s2End && (
+                <span className="bg-black/60 text-cyan-300 px-1.5 py-0.5 rounded text-[9px] border border-cyan-400/40 animate-pulse">
+                  NOW: L{currentLap}
+                </span>
+              )}
             </div>
           </div>
 
