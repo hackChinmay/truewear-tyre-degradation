@@ -187,9 +187,10 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (isMounted && sessions.length > 0) setAvailableSessions(sessions);
     });
 
-    // Auto-probe local FastF1 daemon on load
+    // Auto-probe FastF1 daemon on load
     if (dataProvider.isDemo) {
-      connectFastF1Backend('http://127.0.0.1:8000/api/fastf1').catch(() => {});
+      const initialApiUrl = import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
+      connectFastF1Backend(initialApiUrl).catch(() => {});
     }
 
     return () => {
@@ -204,12 +205,13 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     triggerActionNotification(`Race data source switched to: ${newProvider.providerName}`, 'info');
   };
 
-  const connectFastF1Backend = async (baseUrl: string = 'http://127.0.0.1:8000/api/fastf1'): Promise<boolean> => {
-    const httpProvider = new FastF1HttpRaceDataProvider({ baseUrl, fallbackToDemoOnFailure: true });
+  const connectFastF1Backend = async (baseUrl?: string): Promise<boolean> => {
+    const targetUrl = baseUrl || import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
+    const httpProvider = new FastF1HttpRaceDataProvider({ baseUrl: targetUrl, fallbackToDemoOnFailure: true });
     const status = await httpProvider.getProviderStatus();
     switchDataProvider(httpProvider);
     if (status.status === 'ONLINE') {
-      triggerActionNotification(`Connected to Python FastF1 REST API at ${baseUrl}`, 'success');
+      triggerActionNotification(`Connected to Python FastF1 REST API at ${targetUrl}`, 'success');
       try {
         const weather = await httpProvider.getWeather(`2024-${circuitId}-race`);
         if (weather) {
@@ -227,13 +229,14 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return true;
     } else {
-      triggerActionNotification(`FastF1 Python endpoint at ${baseUrl} unreachable. Waiting for daemon...`, 'warning');
+      triggerActionNotification(`FastF1 Python endpoint at ${targetUrl} unreachable. Waiting for daemon...`, 'warning');
       return false;
     }
   };
 
   const useDemoDataProvider = () => {
-    connectFastF1Backend('http://127.0.0.1:8000/api/fastf1');
+    const targetUrl = import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
+    connectFastF1Backend(targetUrl);
     triggerActionNotification('Re-syncing FastF1 Python telemetry pipeline.', 'info');
   };
 

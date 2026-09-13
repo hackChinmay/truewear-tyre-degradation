@@ -35,7 +35,7 @@ export const ModelDiagnostics: React.FC = () => {
   const [trackEvoDelta, setTrackEvoDelta] = useState(0.038);
 
   const [isApplying, setIsApplying] = useState(false);
-  const [fastf1Url, setFastf1Url] = useState('http://localhost:8000/api/fastf1');
+  const [fastf1Url, setFastf1Url] = useState(import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1');
   const [isConnecting, setIsConnecting] = useState(false);
   const [showPythonSpec, setShowPythonSpec] = useState(false);
   const [hasCopiedCode, setHasCopiedCode] = useState(false);

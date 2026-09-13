@@ -58,8 +58,9 @@ export class FastF1Bridge {
   /**
    * Switch active data provider
    */
-  connectToPythonFastF1(baseUrl: string = 'http://localhost:8000/api/fastf1'): void {
-    setRaceDataProvider(new FastF1HttpRaceDataProvider({ baseUrl }));
+  connectToPythonFastF1(baseUrl?: string): void {
+    const targetUrl = baseUrl || import.meta.env.VITE_FASTF1_API_URL || '/api/fastf1';
+    setRaceDataProvider(new FastF1HttpRaceDataProvider({ baseUrl: targetUrl }));
   }
 
   /**

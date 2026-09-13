@@ -6,9 +6,13 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 
-# FastF1 disk cache
-os.makedirs("./cache", exist_ok=True)
-fastf1.Cache.enable_cache("./cache")
+# FastF1 disk cache (safe for serverless read-only filesystems e.g. Vercel)
+cache_dir = os.environ.get("FASTF1_CACHE_DIR", "/tmp/cache" if os.environ.get("VERCEL") or not os.access(".", os.W_OK) else "./cache")
+try:
+    os.makedirs(cache_dir, exist_ok=True)
+    fastf1.Cache.enable_cache(cache_dir)
+except Exception as _e:
+    pass
 
 app = FastAPI(
     title="TrueWear - FastF1 Real Telemetry Daemon",
@@ -38,6 +42,7 @@ def get_loaded_session(year: int, round_num: int, session_type: str = "R"):
 
 # Status / Health Endpoints
 @app.get("/")
+@app.get("/api/health")
 @app.get("/api/fastf1")
 @app.get("/status")
 @app.get("/health")
@@ -318,6 +323,7 @@ def get_drivers(session_id: Optional[str] = None, year: int = 2024, round_num: i
         ]
 
 # TRUEWEAR Strategy & Degradation Engine Endpoints
+@app.get("/api/strategy")
 @app.get("/api/strategy/recommendation")
 def get_strategy_recommendation(
     lap: int = Query(32, description="Current race lap"),
