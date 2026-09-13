@@ -319,6 +319,7 @@ export const RaceProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const target = drivers.find((d) => d.driverCode === code);
     if (target) {
       setSelectedCompoundState(target.compound);
+      syncStateForLap(currentLap, customPitLap, activePlan, circuitId, code);
       triggerActionNotification(
         `Focus switched to #${target.driverNumber} ${target.driverName} (P${target.position} • ${target.compound} • Age: ${target.tyreAge}L)`,
         'info'
